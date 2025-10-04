@@ -85,10 +85,19 @@ When you drop an asteroid, you'll witness:
 
 ### Recommended
 - **Modern Web Browser**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **WebGL 2.0 Support**: Required for 3D rendering
+- **WebGL 2.0 Support**: Required for 3D rendering (check at [get.webgl.org](https://get.webgl.org))
 - **GPU**: Dedicated graphics card recommended for smooth performance
 - **RAM**: 4GB minimum, 8GB recommended
 - **Internet Connection**: Required to load Cesium.js library and map tiles
+
+### Troubleshooting
+If the 3D Earth doesn't load:
+1. **Check WebGL**: Visit [get.webgl.org](https://get.webgl.org) to ensure WebGL is working
+2. **Try Chrome**: Chrome generally has the best WebGL support
+3. **Update Drivers**: Update your graphics card drivers
+4. **Disable Extensions**: Try disabling browser extensions that might block WebGL
+5. **Check Console**: Open browser console (F12) to see any error messages
+6. **Wait for Loading**: The globe may take 10-30 seconds to fully load depending on your connection
 
 ### Note
 The simulator uses Cesium Ion for terrain and building data. A default access token is included for demo purposes, but for production use, you should:
