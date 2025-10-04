@@ -584,13 +584,7 @@
 
         // Initialize Cesium viewer with error handling
         try {
-            // Create a simple imagery provider - globe NEEDS imagery to render!
-            const simpleImageryProvider = new Cesium.SingleTileImageryProvider({
-                url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
-                rectangle: Cesium.Rectangle.fromDegrees(-180.0, -90.0, 180.0, 90.0)
-            });
-
-            // Create viewer with basic configuration
+            // Create viewer WITHOUT any imagery provider first
             viewer = new Cesium.Viewer('cesiumContainer', {
                 animation: false,
                 baseLayerPicker: false,
@@ -604,9 +598,8 @@
                 timeline: false,
                 navigationHelpButton: false,
                 shouldAnimate: true,
-                imageryProvider: simpleImageryProvider, // Use simple imagery
                 terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-                requestRenderMode: false, // Disable to force continuous rendering
+                requestRenderMode: false,
                 contextOptions: {
                     webgl: {
                         alpha: false,
@@ -618,26 +611,40 @@
                 }
             });
 
-            console.log('Cesium viewer created with imagery provider');
+            console.log('Cesium viewer created');
+            
+            // Remove all default imagery layers
+            viewer.imageryLayers.removeAll();
+            
+            // Add a TileCoordinatesImageryProvider (shows tile coordinates - good for debugging)
+            // This DEFINITELY renders and is built into Cesium
+            const tileProvider = new Cesium.TileCoordinatesImageryProvider();
+            const baseLayer = viewer.imageryLayers.addImageryProvider(tileProvider);
+            baseLayer.alpha = 0.3; // Semi-transparent so we can see baseColor
+            
+            console.log('Tile coordinates imagery added');
             
             // FORCE globe to be visible and set bright color
             viewer.scene.globe.show = true;
-            viewer.scene.globe.baseColor = Cesium.Color.CYAN; // Very bright cyan
+            viewer.scene.globe.baseColor = Cesium.Color.DEEPSKYBLUE;
             viewer.scene.globe.enableLighting = false;
             viewer.scene.globe.showGroundAtmosphere = true;
             
             // Enable all scene elements
             viewer.scene.skyBox.show = true;
             viewer.scene.sun.show = true;
-            viewer.scene.moon.show = true;
             viewer.scene.skyAtmosphere.show = true;
             viewer.scene.backgroundColor = Cesium.Color.BLACK;
             
-            console.log('Globe configured - should show CYAN colored sphere');
+            console.log('Globe should now be visible with blue color and tile grid');
             
-            // Try to add OpenStreetMap imagery overlay after delay
+            // Add OpenStreetMap after a delay
             setTimeout(() => {
                 try {
+                    // Remove tile coordinates
+                    viewer.imageryLayers.remove(baseLayer);
+                    
+                    // Add OSM
                     const osmLayer = viewer.imageryLayers.addImageryProvider(
                         new Cesium.UrlTemplateImageryProvider({
                             url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -646,13 +653,13 @@
                         })
                     );
                     osmLayer.alpha = 1.0;
-                    console.log('OpenStreetMap imagery overlay added');
+                    console.log('OpenStreetMap imagery loaded, replacing tile grid');
                 } catch (imgError) {
-                    console.warn('OSM failed, keeping solid color globe:', imgError);
+                    console.warn('OSM failed, keeping tile grid:', imgError);
                 }
-            }, 1500);
+            }, 2000);
             
-            console.log('Globe configured and should be visible');
+            console.log('Globe configured');
 
             // Set initial camera view - closer to see the globe better
             viewer.camera.setView({
