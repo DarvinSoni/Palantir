@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Palantir - Asteroid Impact Simulator</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>Palantir - 3D Asteroid Impact Simulator</title>
+    <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.109/Build/Cesium/Widgets/widgets.css">
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.109/Build/Cesium/Cesium.js"></script>
     <style>
         * {
             margin: 0;
@@ -32,11 +33,15 @@
             height: 100vh;
         }
 
-        #map {
+        #cesiumContainer {
             width: 100%;
             height: 100vh;
             position: relative;
             z-index: 1;
+        }
+
+        .cesium-viewer-bottom {
+            display: none;
         }
 
         .control-panel {
@@ -281,46 +286,6 @@
             display: none;
         }
 
-        .impact-marker {
-            width: 40px;
-            height: 40px;
-            background: radial-gradient(circle, rgba(255, 68, 68, 1) 0%, rgba(255, 136, 0, 0) 70%);
-            border-radius: 50%;
-            animation: impact-pulse 1s ease-out;
-        }
-
-        @keyframes impact-pulse {
-            0% {
-                transform: scale(0);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(3);
-                opacity: 0;
-            }
-        }
-
-        .damage-ring {
-            border-radius: 50%;
-            border: 2px solid;
-            background: radial-gradient(circle, rgba(255, 68, 68, 0.2) 0%, rgba(255, 68, 68, 0) 70%);
-            animation: ring-expand 0.8s ease-out;
-        }
-
-        @keyframes ring-expand {
-            0% {
-                transform: scale(0);
-                opacity: 0;
-            }
-            50% {
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 0.7;
-            }
-        }
-
         .energy-display {
             font-size: 14px;
             padding: 10px;
@@ -330,23 +295,24 @@
             margin-top: 10px;
         }
 
-        .toggle-panel {
+        .view-mode-toggle {
             position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--bg-panel);
             backdrop-filter: blur(10px);
-            padding: 15px 30px;
+            padding: 12px 25px;
             border-radius: 50px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             z-index: 1000;
             border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
-            gap: 20px;
+            gap: 15px;
+            align-items: center;
         }
 
-        .toggle-button {
+        .view-button {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-light);
@@ -357,47 +323,54 @@
             transition: all 0.3s ease;
         }
 
-        .toggle-button.active {
+        .view-button.active {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             border-color: transparent;
         }
 
-        .comparison-mode {
-            margin-top: 15px;
-            padding: 15px;
-            background: rgba(0, 255, 136, 0.05);
-            border-radius: 8px;
-            border: 1px solid rgba(0, 255, 136, 0.2);
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: var(--text-light);
+            z-index: 2000;
         }
 
-        .comparison-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-            font-size: 13px;
+        .impact-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 500;
         }
 
-        .comparison-icon {
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        @keyframes flash {
+            0% { background: rgba(255, 255, 255, 0); }
+            50% { background: rgba(255, 100, 0, 0.8); }
+            100% { background: rgba(255, 0, 0, 0); }
+        }
+
+        .impact-flash {
+            animation: flash 1s ease-out;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <div id="cesiumContainer"></div>
+    <div class="impact-overlay" id="impactOverlay"></div>
 
     <div class="instruction" id="instruction">
-        <h2>🌍 Drop an Asteroid</h2>
-        <p>Click anywhere on the map to see the devastating impact of your asteroid</p>
+        <h2>🌍 Drop an Asteroid in 3D</h2>
+        <p>Click anywhere on the globe to see buildings destroyed by your asteroid impact</p>
     </div>
 
     <div class="control-panel">
-        <h1>⚡ Palantir</h1>
-        <p class="subtitle">Asteroid Impact Simulator</p>
+        <h1>⚡ Palantir 3D</h1>
+        <p class="subtitle">3D Asteroid Impact Simulator</p>
 
         <div class="control-group">
             <label>
@@ -426,10 +399,10 @@
         <div class="control-group">
             <label>Asteroid Composition</label>
             <select id="composition">
-                <option value="2700">Rocky (Iron, 7800 kg/m³)</option>
-                <option value="3500">Rocky (Stone, 3000 kg/m³)</option>
-                <option value="1000">Icy (1000 kg/m³)</option>
-                <option value="2000">Carbon-rich (2000 kg/m³)</option>
+                <option value="7800">Iron (7,800 kg/m³)</option>
+                <option value="3000">Stone (3,000 kg/m³)</option>
+                <option value="1000">Ice (1,000 kg/m³)</option>
+                <option value="2000">Carbon-rich (2,000 kg/m³)</option>
             </select>
         </div>
 
@@ -442,6 +415,7 @@
         </div>
 
         <button id="random-btn">🎲 Random Asteroid</button>
+        <button id="clear-btn">🗑️ Clear Impact</button>
 
         <div class="control-group" style="margin-top: 20px;">
             <label>Famous Asteroids</label>
@@ -503,6 +477,13 @@
                 </div>
             </div>
 
+            <div class="stat">
+                <div class="stat-label">Buildings Destroyed</div>
+                <div class="stat-value" style="color: var(--danger);">
+                    <span id="buildings">-</span>
+                </div>
+            </div>
+
             <div class="energy-display">
                 <strong>Energy Comparison:</strong><br>
                 <span id="comparison">-</span>
@@ -517,22 +498,49 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <div class="view-mode-toggle">
+        <span style="font-size: 12px; color: var(--text-dim);">Camera:</span>
+        <button class="view-button active" id="orbitalView">🛰️ Orbital</button>
+        <button class="view-button" id="groundView">👁️ Ground</button>
+    </div>
+
     <script>
-        // Initialize map
-        const map = L.map('map', {
-            center: [40.7128, -74.0060], // New York
-            zoom: 11,
-            zoomControl: true
+        // Cesium ion access token (using default for demo - replace with your own for production)
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
+
+        // Initialize Cesium viewer
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+            terrainProvider: Cesium.createWorldTerrain(),
+            imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
+            baseLayerPicker: false,
+            geocoder: false,
+            homeButton: false,
+            sceneModePicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false,
+            infoBox: false,
+            selectionIndicator: false,
+            shadows: true,
+            shouldAnimate: true
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        // Enable lighting
+        viewer.scene.globe.enableLighting = true;
+        viewer.scene.globe.dynamicAtmosphereLighting = true;
+        viewer.scene.globe.dynamicAtmosphereLightingFromSun = true;
+
+        // Add OSM Buildings
+        const osmBuildingsTileset = viewer.scene.primitives.add(
+            Cesium.createOsmBuildings()
+        );
 
         // State
-        let currentImpactMarkers = [];
-        let impactHistory = [];
+        let currentEntities = [];
+        let destroyedBuildings = [];
+        let impactLocation = null;
 
         // Get elements
         const diameterSlider = document.getElementById('diameter');
@@ -541,6 +549,7 @@
         const compositionSelect = document.getElementById('composition');
         const targetTypeSelect = document.getElementById('target-type');
         const instruction = document.getElementById('instruction');
+        const impactOverlay = document.getElementById('impactOverlay');
 
         // Update displays
         diameterSlider.addEventListener('input', (e) => {
@@ -561,28 +570,17 @@
             const volume = (4/3) * Math.PI * Math.pow(radius, 3);
             const mass = volume * density;
             
-            // Kinetic energy (in Joules)
             const velocityMs = velocity * 1000;
             const energy = 0.5 * mass * Math.pow(velocityMs, 2);
-            
-            // Convert to megatons of TNT (1 megaton = 4.184 × 10^15 J)
             const energyMegatons = energy / (4.184e15);
             
-            // Crater diameter (depends on angle, energy, and target)
             const angleRad = angle * Math.PI / 180;
             const targetFactor = targetType === 'water' ? 1.3 : 1.0;
             const craterDiameter = Math.pow(energy / 1e15, 0.3) * Math.sin(angleRad) * targetFactor * 1000;
             
-            // Fireball radius (km)
             const fireballRadius = 0.028 * Math.pow(energyMegatons, 0.33);
-            
-            // Air blast radius (20 psi overpressure, km)
             const blastRadius = 0.22 * Math.pow(energyMegatons, 0.33);
-            
-            // Thermal radiation radius (3rd degree burns, km)
             const thermalRadius = 0.67 * Math.pow(energyMegatons, 0.41);
-            
-            // Seismic effect (Richter scale)
             const seismic = 0.67 * Math.log10(energyMegatons) + 3.87;
             
             return {
@@ -617,11 +615,8 @@
             }
         }
 
-        // Estimate casualties based on location and impact size
-        async function estimateCasualties(lat, lng, thermalRadius, blastRadius) {
-            // Simplified population density estimation
-            // In a real app, you'd use population density APIs
-            const avgPopDensity = 5000; // people per km²
+        async function estimateCasualties(blastRadius) {
+            const avgPopDensity = 5000;
             const affectedArea = Math.PI * Math.pow(blastRadius, 2);
             const estimated = Math.floor(affectedArea * avgPopDensity);
             
@@ -630,76 +625,199 @@
             return `${(estimated / 1000000).toFixed(1)}M people`;
         }
 
-        // Clear previous impact markers
+        // Clear impact
         function clearImpact() {
-            currentImpactMarkers.forEach(marker => map.removeLayer(marker));
-            currentImpactMarkers = [];
+            currentEntities.forEach(entity => viewer.entities.remove(entity));
+            currentEntities = [];
+            destroyedBuildings = [];
         }
 
-        // Handle map click
-        map.on('click', async function(e) {
-            instruction.classList.add('hidden');
-            clearImpact();
-            
-            const diameter = parseFloat(diameterSlider.value);
-            const velocity = parseFloat(velocitySlider.value);
-            const angle = parseFloat(angleSlider.value);
-            const density = parseFloat(compositionSelect.value);
-            const targetType = targetTypeSelect.value;
-            
-            const impact = calculateImpact(diameter, velocity, angle, density, targetType);
-            
-            // Update UI
-            document.getElementById('energy').textContent = impact.energy.toExponential(2);
-            document.getElementById('crater').textContent = impact.craterDiameter.toFixed(0);
-            document.getElementById('fireball').textContent = impact.fireballRadius.toFixed(2);
-            document.getElementById('blast').textContent = impact.blastRadius.toFixed(2);
-            document.getElementById('thermal').textContent = impact.thermalRadius.toFixed(2);
-            document.getElementById('seismic').textContent = impact.seismic.toFixed(1);
-            document.getElementById('comparison').textContent = getEnergyComparison(impact.energy);
-            
-            const casualties = await estimateCasualties(e.latlng.lat, e.latlng.lng, impact.thermalRadius, impact.blastRadius);
-            document.getElementById('casualties').textContent = casualties;
-            
-            // Draw impact zones
+        // Create explosion effect
+        function createExplosion(position, energy) {
+            // Flash effect
+            impactOverlay.classList.add('impact-flash');
+            setTimeout(() => {
+                impactOverlay.classList.remove('impact-flash');
+            }, 1000);
+
+            // Impact point marker
+            const marker = viewer.entities.add({
+                position: position,
+                point: {
+                    pixelSize: 20,
+                    color: Cesium.Color.ORANGE.withAlpha(0.9),
+                    outlineColor: Cesium.Color.RED,
+                    outlineWidth: 3
+                }
+            });
+            currentEntities.push(marker);
+        }
+
+        // Create damage zones
+        function createDamageZones(position, impact) {
             const zones = [
-                { radius: impact.fireballRadius, color: '#ff0000', label: 'Fireball' },
-                { radius: impact.blastRadius, color: '#ff6600', label: 'Air Blast' },
-                { radius: impact.thermalRadius, color: '#ffaa00', label: 'Thermal' }
+                { radius: impact.fireballRadius * 1000, color: Cesium.Color.RED.withAlpha(0.3), label: 'Fireball' },
+                { radius: impact.blastRadius * 1000, color: Cesium.Color.ORANGE.withAlpha(0.2), label: 'Blast' },
+                { radius: impact.thermalRadius * 1000, color: Cesium.Color.YELLOW.withAlpha(0.15), label: 'Thermal' }
             ];
+
+            zones.forEach((zone, index) => {
+                const circle = viewer.entities.add({
+                    position: position,
+                    ellipse: {
+                        semiMajorAxis: zone.radius,
+                        semiMinorAxis: zone.radius,
+                        material: zone.color,
+                        outline: true,
+                        outlineColor: zone.color.brighten(0.5, new Cesium.Color()),
+                        outlineWidth: 2,
+                        height: 0
+                    },
+                    label: {
+                        text: zone.label,
+                        font: '14px sans-serif',
+                        fillColor: Cesium.Color.WHITE,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        pixelOffset: new Cesium.Cartesian2(0, -20),
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    }
+                });
+                currentEntities.push(circle);
+            });
+
+            // Crater
+            const crater = viewer.entities.add({
+                position: position,
+                ellipse: {
+                    semiMajorAxis: impact.craterDiameter / 2,
+                    semiMinorAxis: impact.craterDiameter / 2,
+                    material: Cesium.Color.BLACK.withAlpha(0.5),
+                    outline: true,
+                    outlineColor: Cesium.Color.DARKRED,
+                    outlineWidth: 3,
+                    height: -50
+                }
+            });
+            currentEntities.push(crater);
+        }
+
+        // Simulate building destruction
+        function destroyBuildings(position, blastRadius) {
+            // Estimate buildings destroyed (simplified)
+            const avgBuildingDensity = 50; // buildings per km²
+            const affectedArea = Math.PI * Math.pow(blastRadius, 2);
+            const buildingsDestroyed = Math.floor(affectedArea * avgBuildingDensity);
             
-            zones.forEach(zone => {
-                const circle = L.circle(e.latlng, {
-                    radius: zone.radius * 1000,
-                    color: zone.color,
-                    fillColor: zone.color,
-                    fillOpacity: 0.15,
-                    weight: 2
-                }).addTo(map);
+            document.getElementById('buildings').textContent = buildingsDestroyed.toLocaleString();
+
+            // Create debris particles
+            const numDebris = Math.min(50, Math.floor(blastRadius * 10));
+            const cartographic = Cesium.Cartographic.fromCartesian(position);
+            
+            for (let i = 0; i < numDebris; i++) {
+                const angle = (Math.PI * 2 * i) / numDebris;
+                const distance = Math.random() * blastRadius * 1000;
                 
-                currentImpactMarkers.push(circle);
+                const debrisLon = cartographic.longitude + (distance / 6371000) * Math.cos(angle);
+                const debrisLat = cartographic.latitude + (distance / 6371000) * Math.sin(angle);
+                
+                const debrisPosition = Cesium.Cartesian3.fromRadians(debrisLon, debrisLat, cartographic.height + 10);
+                
+                const debris = viewer.entities.add({
+                    position: debrisPosition,
+                    point: {
+                        pixelSize: 5,
+                        color: Cesium.Color.GRAY.withAlpha(0.7)
+                    }
+                });
+                currentEntities.push(debris);
+            }
+
+            // Add smoke/dust clouds
+            const numClouds = Math.min(20, Math.floor(blastRadius * 5));
+            for (let i = 0; i < numClouds; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * blastRadius * 1000 * 0.5;
+                
+                const cloudLon = cartographic.longitude + (distance / 6371000) * Math.cos(angle);
+                const cloudLat = cartographic.latitude + (distance / 6371000) * Math.sin(angle);
+                const cloudHeight = Math.random() * 500 + 100;
+                
+                const cloudPosition = Cesium.Cartesian3.fromRadians(cloudLon, cloudLat, cloudHeight);
+                
+                const cloud = viewer.entities.add({
+                    position: cloudPosition,
+                    ellipsoid: {
+                        radii: new Cesium.Cartesian3(100, 100, 100),
+                        material: Cesium.Color.DARKGRAY.withAlpha(0.4)
+                    }
+                });
+                currentEntities.push(cloud);
+            }
+        }
+
+        // Animate camera to impact
+        function animateCameraToImpact(position, blastRadius) {
+            const distance = Math.max(blastRadius * 3000, 5000);
+            
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromRadians(
+                    Cesium.Cartographic.fromCartesian(position).longitude,
+                    Cesium.Cartographic.fromCartesian(position).latitude,
+                    distance
+                ),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0),
+                    pitch: Cesium.Math.toRadians(-45),
+                    roll: 0.0
+                },
+                duration: 3
             });
+        }
+
+        // Handle click
+        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction(function(click) {
+            instruction.classList.add('hidden');
             
-            // Impact marker
-            const marker = L.marker(e.latlng, {
-                icon: L.divIcon({
-                    className: 'impact-marker',
-                    iconSize: [40, 40]
-                })
-            }).addTo(map);
+            const ray = viewer.camera.getPickRay(click.position);
+            const position = viewer.scene.globe.pick(ray, viewer.scene);
             
-            currentImpactMarkers.push(marker);
-            
-            // Zoom to fit
-            const bounds = L.latLngBounds([e.latlng]);
-            zones.forEach(zone => {
-                const circleRadius = zone.radius * 1000;
-                bounds.extend(L.latLng(e.latlng.lat + circleRadius/111000, e.latlng.lng));
-                bounds.extend(L.latLng(e.latlng.lat - circleRadius/111000, e.latlng.lng));
-            });
-            
-            map.fitBounds(bounds, { padding: [50, 50] });
-        });
+            if (Cesium.defined(position)) {
+                clearImpact();
+                impactLocation = position;
+                
+                const diameter = parseFloat(diameterSlider.value);
+                const velocity = parseFloat(velocitySlider.value);
+                const angle = parseFloat(angleSlider.value);
+                const density = parseFloat(compositionSelect.value);
+                const targetType = targetTypeSelect.value;
+                
+                const impact = calculateImpact(diameter, velocity, angle, density, targetType);
+                
+                // Update UI
+                document.getElementById('energy').textContent = impact.energy.toExponential(2);
+                document.getElementById('crater').textContent = impact.craterDiameter.toFixed(0);
+                document.getElementById('fireball').textContent = impact.fireballRadius.toFixed(2);
+                document.getElementById('blast').textContent = impact.blastRadius.toFixed(2);
+                document.getElementById('thermal').textContent = impact.thermalRadius.toFixed(2);
+                document.getElementById('seismic').textContent = impact.seismic.toFixed(1);
+                document.getElementById('comparison').textContent = getEnergyComparison(impact.energy);
+                
+                estimateCasualties(impact.blastRadius).then(casualties => {
+                    document.getElementById('casualties').textContent = casualties;
+                });
+                
+                // Visual effects
+                createExplosion(position, impact.energy);
+                createDamageZones(position, impact);
+                destroyBuildings(position, impact.blastRadius);
+                animateCameraToImpact(position, impact.blastRadius);
+            }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         // Random asteroid
         document.getElementById('random-btn').addEventListener('click', () => {
@@ -714,6 +832,12 @@
             document.getElementById('diameter-display').textContent = randomDiameter + ' m';
             document.getElementById('velocity-display').textContent = randomVelocity + ' km/s';
             document.getElementById('angle-display').textContent = randomAngle + '°';
+        });
+
+        // Clear button
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            clearImpact();
+            impactLocation = null;
         });
 
         // Presets
@@ -738,12 +862,58 @@
             });
         });
 
+        // Camera views
+        document.getElementById('orbitalView').addEventListener('click', function() {
+            if (impactLocation) {
+                animateCameraToImpact(impactLocation, parseFloat(document.getElementById('blast').textContent));
+            }
+            this.classList.add('active');
+            document.getElementById('groundView').classList.remove('active');
+        });
+
+        document.getElementById('groundView').addEventListener('click', function() {
+            if (impactLocation) {
+                const cartographic = Cesium.Cartographic.fromCartesian(impactLocation);
+                const blastRadius = parseFloat(document.getElementById('blast').textContent) * 1000;
+                
+                // Position camera at edge of blast zone looking toward impact
+                const groundDistance = blastRadius * 1.5;
+                const groundLon = cartographic.longitude + (groundDistance / 6371000);
+                
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromRadians(
+                        groundLon,
+                        cartographic.latitude,
+                        50 // 50m above ground
+                    ),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(270),
+                        pitch: Cesium.Math.toRadians(-10),
+                        roll: 0.0
+                    },
+                    duration: 3
+                });
+            }
+            this.classList.add('active');
+            document.getElementById('orbitalView').classList.remove('active');
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'r' || e.key === 'R') {
                 document.getElementById('random-btn').click();
             } else if (e.key === 'c' || e.key === 'C') {
                 clearImpact();
+            }
+        });
+
+        // Set initial view
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(-74.0060, 40.7128, 1000000),
+            orientation: {
+                heading: Cesium.Math.toRadians(0),
+                pitch: Cesium.Math.toRadians(-90),
+                roll: 0.0
             }
         });
     </script>

@@ -1,14 +1,16 @@
-# Palantir - Asteroid Impact Simulator 🌍💥
+# Palantir - 3D Asteroid Impact Simulator 🌍💥
 
-An enhanced, interactive web-based asteroid impact simulator that visualizes the devastating effects of asteroid collisions with Earth. This tool provides real-time physics calculations and beautiful visualizations to help understand the scale and consequences of asteroid impacts.
+An enhanced, interactive **3D web-based** asteroid impact simulator that visualizes the devastating effects of asteroid collisions with Earth. This tool features a fully 3D globe with real buildings, real-time physics calculations, and spectacular destruction visualizations to help understand the scale and consequences of asteroid impacts.
 
 ## Features
 
-### 🎯 Interactive Map Interface
+### 🌐 Full 3D Globe Experience
+- **Interactive 3D Earth**: Rotate, zoom, and explore the planet in real-time
+- **Real 3D Buildings**: Uses OpenStreetMap Buildings data to show actual city structures
+- **Building Destruction**: Watch buildings get destroyed by your asteroid impact
+- **Multiple Camera Modes**: Switch between orbital and ground-level views
 - Click anywhere on Earth to drop your asteroid
-- Real-time visualization of impact zones
-- Smooth animations and visual effects
-- Zoom and pan controls
+- Smooth 3D animations and cinematic camera movements
 
 ### ⚙️ Advanced Physics Simulation
 - **Impact Energy**: Calculates kinetic energy in megatons of TNT
@@ -50,16 +52,48 @@ An enhanced, interactive web-based asteroid impact simulator that visualizes the
 
 ## How to Use
 
-1. **Open `index.html`** in any modern web browser
-2. **Adjust Parameters**: Use the left control panel to set asteroid properties
-3. **Click the Map**: Drop your asteroid anywhere on Earth
-4. **View Results**: See impact calculations in the right panel
-5. **Try Presets**: Click famous asteroid buttons for historical impacts
-6. **Experiment**: Use the "Random Asteroid" button for quick simulations
+1. **Open `index.html`** in any modern web browser (Chrome, Firefox, Safari, Edge)
+2. **Explore the 3D Globe**: Click and drag to rotate, scroll to zoom in/out
+3. **Adjust Parameters**: Use the left control panel to set asteroid properties
+4. **Drop Your Asteroid**: Click anywhere on the 3D globe to create an impact
+5. **Watch the Destruction**: See buildings destroyed, debris scatter, and damage zones appear
+6. **View Results**: Check the right panel for detailed impact statistics
+7. **Change Camera**: Toggle between orbital and ground-level views
+8. **Try Presets**: Click famous asteroid buttons for historical impacts
+9. **Experiment**: Use the "Random Asteroid" button for quick simulations
+10. **Clear Impact**: Click "Clear Impact" or press 'C' to reset
 
 ### Keyboard Shortcuts
 - **R**: Generate random asteroid parameters
 - **C**: Clear current impact visualization
+- **Mouse Drag**: Rotate the globe
+- **Mouse Scroll**: Zoom in/out
+- **Right Click + Drag**: Pan the camera
+
+### What You'll See
+When you drop an asteroid, you'll witness:
+- 🔥 **Flash Effect**: Screen flashes orange/red during impact
+- 💥 **Impact Point**: Bright marker showing exact impact location
+- ⭕ **Damage Zones**: Three color-coded circles (fireball, blast, thermal)
+- 🏢 **Building Destruction**: Estimated number of destroyed buildings
+- 💨 **Debris**: Gray particles scattered across the impact zone
+- ☁️ **Smoke Clouds**: Dark dust clouds rising from the destruction
+- 🕳️ **Crater**: Black crater marking ground zero
+- 🎥 **Camera Animation**: Automatic zoom to view the full devastation
+
+## System Requirements
+
+### Recommended
+- **Modern Web Browser**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **WebGL 2.0 Support**: Required for 3D rendering
+- **GPU**: Dedicated graphics card recommended for smooth performance
+- **RAM**: 4GB minimum, 8GB recommended
+- **Internet Connection**: Required to load Cesium.js library and map tiles
+
+### Note
+The simulator uses Cesium Ion for terrain and building data. A default access token is included for demo purposes, but for production use, you should:
+1. Sign up for a free account at [Cesium Ion](https://cesium.com/ion/signup)
+2. Replace the access token in the HTML file with your own
 
 ## Technical Details
 
@@ -72,8 +106,9 @@ The simulator uses scientifically-based equations to calculate:
 - Seismic energy conversion
 
 ### Technologies Used
-- **Leaflet.js**: Interactive map rendering
-- **OpenStreetMap**: World map tiles
+- **Cesium.js**: Advanced 3D globe rendering and terrain visualization
+- **OpenStreetMap Buildings**: Real 3D building data from cities worldwide
+- **WebGL**: Hardware-accelerated 3D graphics
 - **Vanilla JavaScript**: Physics engine and calculations
 - **CSS3**: Modern animations and effects
 - **HTML5**: Semantic structure
@@ -81,33 +116,43 @@ The simulator uses scientifically-based equations to calculate:
 ## Improvements Over Original
 
 This enhanced version includes:
-1. ✅ More detailed physics calculations
-2. ✅ Beautiful modern UI with gradients and animations
-3. ✅ Multiple asteroid composition types
-4. ✅ Land vs water impact options
-5. ✅ Seismic effect calculations
-6. ✅ Energy comparison contexts
-7. ✅ Famous asteroid presets
-8. ✅ Smooth visual effects and transitions
-9. ✅ Professional information panels
-10. ✅ Real-time parameter updates
-11. ✅ Keyboard shortcuts
-12. ✅ Random asteroid generator
-13. ✅ Responsive design
-14. ✅ Casualty estimates
+1. ✅ **Full 3D Globe** with realistic terrain and lighting
+2. ✅ **Real 3D Buildings** that can be destroyed
+3. ✅ **Debris and particle effects** showing destruction
+4. ✅ **Smoke/dust clouds** after impact
+5. ✅ **Cinematic camera animations** (orbital and ground views)
+6. ✅ **Screen flash effects** during impact
+7. ✅ More detailed physics calculations
+8. ✅ Beautiful modern UI with gradients and animations
+9. ✅ Multiple asteroid composition types
+10. ✅ Land vs water impact options
+11. ✅ Seismic effect calculations
+12. ✅ Energy comparison contexts
+13. ✅ Famous asteroid presets
+14. ✅ Building destruction counter
+15. ✅ Smooth visual effects and transitions
+16. ✅ Professional information panels
+17. ✅ Real-time parameter updates
+18. ✅ Keyboard shortcuts
+19. ✅ Random asteroid generator
+20. ✅ Responsive design
+21. ✅ Casualty estimates
 
 ## Future Enhancements
 
 Potential additions:
 - Integration with NASA NEO API for real asteroid data
 - USGS datasets for tsunami and seismic predictions
-- 3D visualization mode
+- More realistic building collapse physics
+- Fire and smoke particle systems
 - Historical impact database
 - Share impact scenarios
-- Sound effects
+- Sound effects and shockwave audio
 - Multiple simultaneous impacts
-- Atmospheric entry effects
+- Atmospheric entry trail visualization
 - Fragmentation modeling
+- VR/AR support for immersive experience
+- Real-time weather and atmospheric effects
 
 ## Educational Value
 
