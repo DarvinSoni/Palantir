@@ -584,6 +584,12 @@
 
         // Initialize Cesium viewer with error handling
         try {
+            // Create a simple imagery provider - globe NEEDS imagery to render!
+            const simpleImageryProvider = new Cesium.SingleTileImageryProvider({
+                url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
+                rectangle: Cesium.Rectangle.fromDegrees(-180.0, -90.0, 180.0, 90.0)
+            });
+
             // Create viewer with basic configuration
             viewer = new Cesium.Viewer('cesiumContainer', {
                 animation: false,
@@ -598,7 +604,7 @@
                 timeline: false,
                 navigationHelpButton: false,
                 shouldAnimate: true,
-                imageryProvider: false, // Start without imagery
+                imageryProvider: simpleImageryProvider, // Use simple imagery
                 terrainProvider: new Cesium.EllipsoidTerrainProvider(),
                 requestRenderMode: false, // Disable to force continuous rendering
                 contextOptions: {
@@ -612,46 +618,41 @@
                 }
             });
 
-            console.log('Cesium viewer created');
-
-            // FORCE globe to be visible and render
+            console.log('Cesium viewer created with imagery provider');
+            
+            // FORCE globe to be visible and set bright color
             viewer.scene.globe.show = true;
+            viewer.scene.globe.baseColor = Cesium.Color.CYAN; // Very bright cyan
+            viewer.scene.globe.enableLighting = false;
+            viewer.scene.globe.showGroundAtmosphere = true;
+            
+            // Enable all scene elements
             viewer.scene.skyBox.show = true;
             viewer.scene.sun.show = true;
             viewer.scene.moon.show = true;
             viewer.scene.skyAtmosphere.show = true;
-            
-            // Set globe base color (will show even without imagery)
-            viewer.scene.globe.baseColor = Cesium.Color.DODGERBLUE;
-            viewer.scene.globe.enableLighting = false;
-            viewer.scene.globe.showGroundAtmosphere = true;
-            
-            // Set background color
             viewer.scene.backgroundColor = Cesium.Color.BLACK;
             
-            // Force initial render
-            viewer.scene.requestRender();
+            console.log('Globe configured - should show CYAN colored sphere');
             
-            console.log('Globe visibility forced');
-            
-            // Add OpenStreetMap imagery AFTER a delay
+            // Try to add OpenStreetMap imagery overlay after delay
             setTimeout(() => {
                 try {
-                    viewer.imageryLayers.addImageryProvider(
+                    const osmLayer = viewer.imageryLayers.addImageryProvider(
                         new Cesium.UrlTemplateImageryProvider({
                             url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                             subdomains: ['a', 'b', 'c'],
                             maximumLevel: 19
                         })
                     );
-                    console.log('OpenStreetMap imagery loaded');
-                    viewer.scene.requestRender();
+                    osmLayer.alpha = 1.0;
+                    console.log('OpenStreetMap imagery overlay added');
                 } catch (imgError) {
-                    console.warn('Could not load OpenStreetMap:', imgError);
+                    console.warn('OSM failed, keeping solid color globe:', imgError);
                 }
-            }, 1000);
+            }, 1500);
             
-            console.log('Globe configured and visible');
+            console.log('Globe configured and should be visible');
 
             // Set initial camera view - closer to see the globe better
             viewer.camera.setView({
