@@ -426,7 +426,7 @@
 
     <div class="instruction" id="instruction">
         <h2>🌍 Drop an Asteroid in 3D</h2>
-        <p>Click anywhere on the globe to see buildings destroyed by your asteroid impact</p>
+        <p>Click anywhere on the globe to unleash devastation and watch the destruction unfold</p>
     </div>
 
     <div class="control-panel">
@@ -573,11 +573,14 @@
 
         // Initialize Cesium viewer with error handling
         try {
-            // Set access token
-            Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
+            // Use OpenStreetMap imagery provider (free, no auth required)
+            const imageryProvider = new Cesium.OpenStreetMapImageryProvider({
+                url: 'https://a.tile.openstreetmap.org/'
+            });
 
-            // Create viewer with basic configuration (no terrain initially)
+            // Create viewer with basic configuration using free imagery
             viewer = new Cesium.Viewer('cesiumContainer', {
+                imageryProvider: imageryProvider,
                 animation: false,
                 baseLayerPicker: false,
                 fullscreenButton: false,
@@ -589,29 +592,11 @@
                 selectionIndicator: false,
                 timeline: false,
                 navigationHelpButton: false,
-                shouldAnimate: true
+                shouldAnimate: true,
+                terrainProvider: new Cesium.EllipsoidTerrainProvider()
             });
 
-            // Try to load terrain provider
-            try {
-                if (typeof Cesium.createWorldTerrain === 'function') {
-                    viewer.terrainProvider = Cesium.createWorldTerrain({
-                        requestWaterMask: true,
-                        requestVertexNormals: true
-                    });
-                    console.log('World terrain loaded successfully');
-                } else if (Cesium.CesiumTerrainProvider) {
-                    // Fallback to Cesium World Terrain
-                    viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
-                        url: Cesium.IonResource.fromAssetId(1)
-                    });
-                    console.log('Cesium terrain provider loaded successfully');
-                } else {
-                    console.warn('Using ellipsoid terrain (no 3D terrain available)');
-                }
-            } catch (terrainError) {
-                console.warn('Could not load terrain, using flat Earth:', terrainError);
-            }
+            console.log('Cesium viewer created with OpenStreetMap imagery');
 
             // Enable lighting
             viewer.scene.globe.enableLighting = true;
@@ -619,19 +604,9 @@
                 viewer.scene.globe.dynamicAtmosphereLighting = true;
             }
 
-            // Add OSM Buildings with error handling
-            try {
-                if (typeof Cesium.createOsmBuildings === 'function') {
-                    const osmBuildingsTileset = viewer.scene.primitives.add(
-                        Cesium.createOsmBuildings()
-                    );
-                    console.log('OSM Buildings loaded successfully');
-                } else {
-                    console.warn('OSM Buildings not available in this Cesium version');
-                }
-            } catch (buildingError) {
-                console.warn('Could not load OSM Buildings:', buildingError);
-            }
+            // Note: 3D buildings require Cesium Ion authentication
+            // Using a simplified approach for building visualization
+            console.log('Using simplified building visualization (3D buildings require Cesium Ion account)');
 
             // Set initial camera view
             viewer.camera.setView({
@@ -834,50 +809,97 @@
             
             document.getElementById('buildings').textContent = buildingsDestroyed.toLocaleString();
 
-            // Create debris particles
-            const numDebris = Math.min(50, Math.floor(blastRadius * 10));
             const cartographic = Cesium.Cartographic.fromCartesian(position);
-            
+
+            // Create simple 3D building representations in the impact zone
+            const numBuildings = Math.min(30, Math.floor(blastRadius * 8));
+            for (let i = 0; i < numBuildings; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * blastRadius * 1000 * 0.8;
+                
+                const buildingLon = cartographic.longitude + (distance / 6371000) * Math.cos(angle);
+                const buildingLat = cartographic.latitude + (distance / 6371000) * Math.sin(angle);
+                const buildingHeight = Math.random() * 60 + 20;
+                
+                // Create building as a box
+                const building = viewer.entities.add({
+                    position: Cesium.Cartesian3.fromRadians(buildingLon, buildingLat, buildingHeight / 2),
+                    box: {
+                        dimensions: new Cesium.Cartesian3(15, 15, buildingHeight),
+                        material: Cesium.Color.DARKGRAY.withAlpha(0.3),
+                        outline: true,
+                        outlineColor: Cesium.Color.BLACK
+                    }
+                });
+                currentEntities.push(building);
+            }
+
+            // Create debris particles
+            const numDebris = Math.min(100, Math.floor(blastRadius * 15));
             for (let i = 0; i < numDebris; i++) {
                 const angle = (Math.PI * 2 * i) / numDebris;
                 const distance = Math.random() * blastRadius * 1000;
                 
                 const debrisLon = cartographic.longitude + (distance / 6371000) * Math.cos(angle);
                 const debrisLat = cartographic.latitude + (distance / 6371000) * Math.sin(angle);
+                const debrisHeight = Math.random() * 30 + 5;
                 
-                const debrisPosition = Cesium.Cartesian3.fromRadians(debrisLon, debrisLat, cartographic.height + 10);
+                const debrisPosition = Cesium.Cartesian3.fromRadians(debrisLon, debrisLat, debrisHeight);
                 
                 const debris = viewer.entities.add({
                     position: debrisPosition,
                     point: {
-                        pixelSize: 5,
-                        color: Cesium.Color.GRAY.withAlpha(0.7),
+                        pixelSize: Math.random() * 8 + 3,
+                        color: Cesium.Color.fromRandom({ alpha: 0.7 }),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY
                     }
                 });
                 currentEntities.push(debris);
             }
 
-            // Add smoke/dust clouds
-            const numClouds = Math.min(20, Math.floor(blastRadius * 5));
+            // Add smoke/dust clouds with varied heights
+            const numClouds = Math.min(40, Math.floor(blastRadius * 8));
             for (let i = 0; i < numClouds; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * blastRadius * 1000 * 0.5;
+                const distance = Math.random() * blastRadius * 1000 * 0.6;
                 
                 const cloudLon = cartographic.longitude + (distance / 6371000) * Math.cos(angle);
                 const cloudLat = cartographic.latitude + (distance / 6371000) * Math.sin(angle);
-                const cloudHeight = Math.random() * 500 + 100;
+                const cloudHeight = Math.random() * 1000 + 200;
                 
                 const cloudPosition = Cesium.Cartesian3.fromRadians(cloudLon, cloudLat, cloudHeight);
                 
+                const cloudSize = Math.random() * 150 + 80;
                 const cloud = viewer.entities.add({
                     position: cloudPosition,
                     ellipsoid: {
-                        radii: new Cesium.Cartesian3(100, 100, 100),
-                        material: Cesium.Color.DARKGRAY.withAlpha(0.4)
+                        radii: new Cesium.Cartesian3(cloudSize, cloudSize, cloudSize * 0.8),
+                        material: Cesium.Color.DARKGRAY.withAlpha(Math.random() * 0.4 + 0.2)
                     }
                 });
                 currentEntities.push(cloud);
+            }
+
+            // Add fire effects near impact
+            const numFires = Math.min(20, Math.floor(blastRadius * 4));
+            for (let i = 0; i < numFires; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * blastRadius * 400;
+                
+                const fireLon = cartographic.longitude + (distance / 6371000) * Math.cos(angle);
+                const fireLat = cartographic.latitude + (distance / 6371000) * Math.sin(angle);
+                
+                const fire = viewer.entities.add({
+                    position: Cesium.Cartesian3.fromRadians(fireLon, fireLat, 20),
+                    point: {
+                        pixelSize: 12,
+                        color: Cesium.Color.ORANGE.withAlpha(0.8),
+                        outlineColor: Cesium.Color.RED,
+                        outlineWidth: 2,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    }
+                });
+                currentEntities.push(fire);
             }
         }
 

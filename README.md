@@ -100,9 +100,12 @@ If the 3D Earth doesn't load:
 6. **Wait for Loading**: The globe may take 10-30 seconds to fully load depending on your connection
 
 ### Note
-The simulator uses Cesium Ion for terrain and building data. A default access token is included for demo purposes, but for production use, you should:
+The simulator uses **free OpenStreetMap imagery** and **no authentication required**! It works out of the box without needing any API keys or Cesium Ion accounts. Buildings are represented as simple 3D boxes in the destruction zone.
+
+For advanced features (real 3D buildings from actual city data), you can optionally:
 1. Sign up for a free account at [Cesium Ion](https://cesium.com/ion/signup)
-2. Replace the access token in the HTML file with your own
+2. Get your access token and replace it in the HTML file
+3. Uncomment the OSM Buildings code
 
 ## Technical Details
 
