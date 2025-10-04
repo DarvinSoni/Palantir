@@ -41,7 +41,15 @@
         }
 
         .cesium-viewer-bottom {
-            display: none;
+            display: none !important;
+        }
+
+        .cesium-widget-credits {
+            display: none !important;
+        }
+
+        .cesium-viewer .cesium-viewer-cesiumWidgetContainer .cesium-credit-textContainer {
+            display: none !important;
         }
 
         .loading-screen {
@@ -573,14 +581,8 @@
 
         // Initialize Cesium viewer with error handling
         try {
-            // Use OpenStreetMap imagery provider (free, no auth required)
-            const imageryProvider = new Cesium.OpenStreetMapImageryProvider({
-                url: 'https://a.tile.openstreetmap.org/'
-            });
-
-            // Create viewer with basic configuration using free imagery
+            // Create viewer with basic configuration
             viewer = new Cesium.Viewer('cesiumContainer', {
-                imageryProvider: imageryProvider,
                 animation: false,
                 baseLayerPicker: false,
                 fullscreenButton: false,
@@ -593,20 +595,37 @@
                 timeline: false,
                 navigationHelpButton: false,
                 shouldAnimate: true,
+                imageryProvider: false, // Start without imagery
                 terrainProvider: new Cesium.EllipsoidTerrainProvider()
             });
 
-            console.log('Cesium viewer created with OpenStreetMap imagery');
+            console.log('Cesium viewer created');
 
-            // Enable lighting
-            viewer.scene.globe.enableLighting = true;
-            if (viewer.scene.globe.dynamicAtmosphereLighting) {
-                viewer.scene.globe.dynamicAtmosphereLighting = true;
+            // Add a simple single-color globe
+            viewer.scene.globe.show = true;
+            viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1e3a5f'); // Deep ocean blue
+            
+            // Try to add OpenStreetMap imagery after viewer is ready
+            try {
+                viewer.imageryLayers.addImageryProvider(
+                    new Cesium.UrlTemplateImageryProvider({
+                        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        subdomains: ['a', 'b', 'c'],
+                        maximumLevel: 19
+                    })
+                );
+                console.log('OpenStreetMap imagery loaded');
+            } catch (imgError) {
+                console.warn('Could not load OpenStreetMap, using solid color globe:', imgError);
             }
-
-            // Note: 3D buildings require Cesium Ion authentication
-            // Using a simplified approach for building visualization
-            console.log('Using simplified building visualization (3D buildings require Cesium Ion account)');
+            
+            // Enable lighting and atmosphere
+            viewer.scene.globe.enableLighting = false; // Disable for better visibility
+            viewer.scene.skyAtmosphere.show = true;
+            viewer.scene.sun.show = true;
+            viewer.scene.moon.show = false;
+            
+            console.log('Globe configured and visible');
 
             // Set initial camera view
             viewer.camera.setView({
