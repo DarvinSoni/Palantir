@@ -72,40 +72,21 @@ An enhanced, interactive **3D web-based** asteroid impact simulator that visuali
 
 ### What You'll See
 When you drop an asteroid, you'll witness:
-- 🔥 **Flash Effect**: Screen flashes orange/red during impact
-- 💥 **Impact Point**: Bright marker showing exact impact location
+- 💥 **Impact Point**: Animated marker showing exact impact location
 - ⭕ **Damage Zones**: Three color-coded circles (fireball, blast, thermal)
-- 🏢 **Building Destruction**: Estimated number of destroyed buildings
-- 💨 **Debris**: Gray particles scattered across the impact zone
-- ☁️ **Smoke Clouds**: Dark dust clouds rising from the destruction
-- 🕳️ **Crater**: Black crater marking ground zero
-- 🎥 **Camera Animation**: Automatic zoom to view the full devastation
+- 📊 **Real-time Statistics**: Detailed impact calculations
+- 🔍 **Auto-zoom**: Map automatically frames the entire impact area
+- 🎯 **Interactive Zones**: Click circles for more information
 
 ## System Requirements
 
 ### Recommended
-- **Modern Web Browser**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **WebGL 2.0 Support**: Required for 3D rendering (check at [get.webgl.org](https://get.webgl.org))
-- **GPU**: Dedicated graphics card recommended for smooth performance
-- **RAM**: 4GB minimum, 8GB recommended
-- **Internet Connection**: Required to load Cesium.js library and map tiles
-
-### Troubleshooting
-If the 3D Earth doesn't load:
-1. **Check WebGL**: Visit [get.webgl.org](https://get.webgl.org) to ensure WebGL is working
-2. **Try Chrome**: Chrome generally has the best WebGL support
-3. **Update Drivers**: Update your graphics card drivers
-4. **Disable Extensions**: Try disabling browser extensions that might block WebGL
-5. **Check Console**: Open browser console (F12) to see any error messages
-6. **Wait for Loading**: The globe may take 10-30 seconds to fully load depending on your connection
+- **Modern Web Browser**: Chrome, Firefox, Safari, Edge (any recent version)
+- **Internet Connection**: Required to load Leaflet.js library and map tiles
+- **No special requirements**: Works on any device with a web browser!
 
 ### Note
-The simulator uses **free OpenStreetMap imagery** and **no authentication required**! It works out of the box without needing any API keys or Cesium Ion accounts. Buildings are represented as simple 3D boxes in the destruction zone.
-
-For advanced features (real 3D buildings from actual city data), you can optionally:
-1. Sign up for a free account at [Cesium Ion](https://cesium.com/ion/signup)
-2. Get your access token and replace it in the HTML file
-3. Uncomment the OSM Buildings code
+The simulator uses **free OpenStreetMap** tiles and **Leaflet.js** - no authentication or API keys required! It works out of the box on any system without WebGL or GPU requirements.
 
 ## Technical Details
 
@@ -128,27 +109,25 @@ The simulator uses scientifically-based equations to calculate:
 ## Improvements Over Original
 
 This enhanced version includes:
-1. ✅ **Full 3D Globe** with realistic terrain and lighting
-2. ✅ **Real 3D Buildings** that can be destroyed
-3. ✅ **Debris and particle effects** showing destruction
-4. ✅ **Smoke/dust clouds** after impact
-5. ✅ **Cinematic camera animations** (orbital and ground views)
-6. ✅ **Screen flash effects** during impact
-7. ✅ More detailed physics calculations
-8. ✅ Beautiful modern UI with gradients and animations
-9. ✅ Multiple asteroid composition types
-10. ✅ Land vs water impact options
-11. ✅ Seismic effect calculations
-12. ✅ Energy comparison contexts
-13. ✅ Famous asteroid presets
-14. ✅ Building destruction counter
-15. ✅ Smooth visual effects and transitions
-16. ✅ Professional information panels
-17. ✅ Real-time parameter updates
-18. ✅ Keyboard shortcuts
-19. ✅ Random asteroid generator
-20. ✅ Responsive design
-21. ✅ Casualty estimates
+1. ✅ **Interactive 2D map** with smooth controls
+2. ✅ **Animated impact zones** with color-coded circles
+3. ✅ **Zoom-to-impact** feature for better visualization
+4. ✅ **Popup information** on damage zones
+5. ✅ More detailed physics calculations
+6. ✅ Beautiful modern UI with gradients and animations
+7. ✅ Multiple asteroid composition types
+8. ✅ Land vs water impact options
+9. ✅ Seismic effect calculations
+10. ✅ Energy comparison contexts
+11. ✅ Famous asteroid presets
+12. ✅ Smooth visual effects and transitions
+13. ✅ Professional information panels
+14. ✅ Real-time parameter updates
+15. ✅ Keyboard shortcuts
+16. ✅ Random asteroid generator
+17. ✅ Responsive design
+18. ✅ Casualty estimates
+19. ✅ Works reliably on all systems (no WebGL issues)
 
 ## Future Enhancements
 
