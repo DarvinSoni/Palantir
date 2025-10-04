@@ -600,41 +600,62 @@
                 shouldAnimate: true,
                 imageryProvider: false, // Start without imagery
                 terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-                requestRenderMode: true,
-                maximumRenderTimeChange: Infinity
+                requestRenderMode: false, // Disable to force continuous rendering
+                contextOptions: {
+                    webgl: {
+                        alpha: false,
+                        depth: true,
+                        stencil: false,
+                        antialias: true,
+                        powerPreference: "high-performance"
+                    }
+                }
             });
 
             console.log('Cesium viewer created');
 
-            // Add a simple single-color globe
+            // FORCE globe to be visible and render
             viewer.scene.globe.show = true;
-            viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1e3a5f'); // Deep ocean blue
-            
-            // Try to add OpenStreetMap imagery after viewer is ready
-            try {
-                viewer.imageryLayers.addImageryProvider(
-                    new Cesium.UrlTemplateImageryProvider({
-                        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        subdomains: ['a', 'b', 'c'],
-                        maximumLevel: 19
-                    })
-                );
-                console.log('OpenStreetMap imagery loaded');
-            } catch (imgError) {
-                console.warn('Could not load OpenStreetMap, using solid color globe:', imgError);
-            }
-            
-            // Enable lighting and atmosphere
-            viewer.scene.globe.enableLighting = false; // Disable for better visibility
-            viewer.scene.skyAtmosphere.show = true;
+            viewer.scene.skyBox.show = true;
             viewer.scene.sun.show = true;
-            viewer.scene.moon.show = false;
+            viewer.scene.moon.show = true;
+            viewer.scene.skyAtmosphere.show = true;
+            
+            // Set globe base color (will show even without imagery)
+            viewer.scene.globe.baseColor = Cesium.Color.DODGERBLUE;
+            viewer.scene.globe.enableLighting = false;
+            viewer.scene.globe.showGroundAtmosphere = true;
+            
+            // Set background color
+            viewer.scene.backgroundColor = Cesium.Color.BLACK;
+            
+            // Force initial render
+            viewer.scene.requestRender();
+            
+            console.log('Globe visibility forced');
+            
+            // Add OpenStreetMap imagery AFTER a delay
+            setTimeout(() => {
+                try {
+                    viewer.imageryLayers.addImageryProvider(
+                        new Cesium.UrlTemplateImageryProvider({
+                            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            subdomains: ['a', 'b', 'c'],
+                            maximumLevel: 19
+                        })
+                    );
+                    console.log('OpenStreetMap imagery loaded');
+                    viewer.scene.requestRender();
+                } catch (imgError) {
+                    console.warn('Could not load OpenStreetMap:', imgError);
+                }
+            }, 1000);
             
             console.log('Globe configured and visible');
 
-            // Set initial camera view
+            // Set initial camera view - closer to see the globe better
             viewer.camera.setView({
-                destination: Cesium.Cartesian3.fromDegrees(-74.0060, 40.7128, 15000000),
+                destination: Cesium.Cartesian3.fromDegrees(-74.0060, 40.7128, 20000000),
                 orientation: {
                     heading: 0.0,
                     pitch: -Cesium.Math.PI_OVER_TWO,
@@ -642,10 +663,35 @@
                 }
             });
 
+            // Add a test entity to verify 3D rendering works
+            viewer.entities.add({
+                position: Cesium.Cartesian3.fromDegrees(-74.0, 40.7, 1000000),
+                point: {
+                    pixelSize: 20,
+                    color: Cesium.Color.RED,
+                    outlineColor: Cesium.Color.WHITE,
+                    outlineWidth: 2
+                },
+                label: {
+                    text: 'TEST MARKER',
+                    font: '14px sans-serif',
+                    fillColor: Cesium.Color.WHITE,
+                    outlineColor: Cesium.Color.BLACK,
+                    outlineWidth: 2,
+                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                    pixelOffset: new Cesium.Cartesian2(0, -20)
+                }
+            });
+
+            console.log('Test marker added');
+
             // Hide loading screen after globe is ready
             setTimeout(() => {
                 loadingScreen.classList.add('hidden');
                 console.log('Cesium viewer initialized successfully');
+                console.log('Globe show:', viewer.scene.globe.show);
+                console.log('Globe baseColor:', viewer.scene.globe.baseColor);
             }, 2000);
 
         } catch (error) {
