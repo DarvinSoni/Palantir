@@ -576,6 +576,7 @@
             // Set access token
             Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
 
+            // Create viewer with basic configuration (no terrain initially)
             viewer = new Cesium.Viewer('cesiumContainer', {
                 animation: false,
                 baseLayerPicker: false,
@@ -588,23 +589,46 @@
                 selectionIndicator: false,
                 timeline: false,
                 navigationHelpButton: false,
-                shouldAnimate: true,
-                terrainProvider: Cesium.createWorldTerrain({
-                    requestWaterMask: true,
-                    requestVertexNormals: true
-                })
+                shouldAnimate: true
             });
+
+            // Try to load terrain provider
+            try {
+                if (typeof Cesium.createWorldTerrain === 'function') {
+                    viewer.terrainProvider = Cesium.createWorldTerrain({
+                        requestWaterMask: true,
+                        requestVertexNormals: true
+                    });
+                    console.log('World terrain loaded successfully');
+                } else if (Cesium.CesiumTerrainProvider) {
+                    // Fallback to Cesium World Terrain
+                    viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
+                        url: Cesium.IonResource.fromAssetId(1)
+                    });
+                    console.log('Cesium terrain provider loaded successfully');
+                } else {
+                    console.warn('Using ellipsoid terrain (no 3D terrain available)');
+                }
+            } catch (terrainError) {
+                console.warn('Could not load terrain, using flat Earth:', terrainError);
+            }
 
             // Enable lighting
             viewer.scene.globe.enableLighting = true;
-            viewer.scene.globe.dynamicAtmosphereLighting = true;
+            if (viewer.scene.globe.dynamicAtmosphereLighting) {
+                viewer.scene.globe.dynamicAtmosphereLighting = true;
+            }
 
             // Add OSM Buildings with error handling
             try {
-                const osmBuildingsTileset = viewer.scene.primitives.add(
-                    Cesium.createOsmBuildings()
-                );
-                console.log('OSM Buildings loaded successfully');
+                if (typeof Cesium.createOsmBuildings === 'function') {
+                    const osmBuildingsTileset = viewer.scene.primitives.add(
+                        Cesium.createOsmBuildings()
+                    );
+                    console.log('OSM Buildings loaded successfully');
+                } else {
+                    console.warn('OSM Buildings not available in this Cesium version');
+                }
             } catch (buildingError) {
                 console.warn('Could not load OSM Buildings:', buildingError);
             }
