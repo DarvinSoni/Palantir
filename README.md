@@ -12,14 +12,33 @@ An enhanced, interactive web-based asteroid impact simulator that visualizes the
 - **Animated impact markers** showing ground zero
 - **Reliable rendering** that works on all systems
 
-### 🚀 3D Trajectory Visualization (NEW!)
+### 🚀 3D Trajectory Visualization
 - **Separate trajectory page** with full 3D animation
 - Watch the meteor approach Earth from space
+- **Real NASA Blue Marble texture** on Earth
 - **Atmospheric entry effects** with heat trails
 - **Impact explosion** with particle effects
+- **Bright flash and boom sound** on impact
 - **Real-time timeline** showing impact phases
 - **Orbiting camera** for cinematic views
-- **Seamless navigation** between pages
+
+### 🛡️ Mitigation Strategies Evaluation Engine (NEW!)
+- **Kinetic Impactor (KI) Model**:
+  - Based on NASA's DART mission
+  - Calculate momentum transfer and deflection
+  - Momentum enhancement factor (β) from ejecta
+  - Adjustable impactor mass and velocity
+  - Success evaluation based on required deflection
+- **Gravity Tractor (GT) Model**:
+  - Slow gravitational pull method
+  - Calculate mission duration requirements
+  - Multiple tractor support (formation flying)
+  - Standoff distance optimization
+- **Strategy Comparison**:
+  - Side-by-side analysis
+  - Automatic recommendations
+  - Mission complexity assessment
+- **Educational formulas** showing methodology
 
 ### 📊 Dynamic Casualty Calculations (NEW!)
 - **Location-based factors**:
@@ -76,18 +95,20 @@ An enhanced, interactive web-based asteroid impact simulator that visualizes the
 1. **Open `index.html`** in any modern web browser (Chrome, Firefox, Safari, Edge)
 2. **Adjust Parameters**: Use the left control panel to set asteroid properties
 3. **Click the Map**: Drop your asteroid anywhere on Earth
-4. **View Results**: See impact zones and casualty estimates
+4. **View Results**: See impact zones, detailed casualty breakdown, and statistics
 5. **See Location Details**: Check the "Location Type" to understand the area
-6. **View Trajectory**: Click "🚀 View Trajectory Animation" button
-7. **Watch in 3D**: See the meteor approach and impact in full 3D animation
-8. **Return**: Click "← Back to Simulator" to return to main page
-9. **Try Presets**: Click famous asteroid buttons for historical impacts
-10. **Experiment**: Use the "Random Asteroid" button for quick simulations
+6. **View Trajectory**: Click "🚀 View Trajectory Animation" button to see 3D approach
+7. **Evaluate Mitigation**: Click "🛡️ Evaluate Mitigation Strategies" button
+8. **Choose Defense Method**: Test Kinetic Impactor or Gravity Tractor
+9. **Compare Strategies**: See which method works best for your scenario
+10. **Return**: Click "← Back to Simulator" buttons to navigate
+11. **Try Presets**: Click famous asteroid buttons for historical impacts
 
 ### Keyboard Shortcuts
 - **R**: Generate random asteroid parameters
 - **C**: Clear current impact visualization
 - **T**: View trajectory animation (after impact)
+- **M**: Evaluate mitigation strategies (after impact)
 - **Mouse Drag**: Pan the map
 - **Mouse Scroll**: Zoom in/out
 
