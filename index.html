@@ -617,62 +617,65 @@
 
         // Determine location type with better accuracy
         function determineLocationType(lat, lng) {
-            // Check if coordinates are in ocean (very rough check)
-            const isLikelyOcean = (
-                (Math.abs(lng) > 20 && Math.abs(lng) < 180 && Math.abs(lat) < 60 && 
-                 (lng < -30 || lng > 40) && !(lat > 30 && lat < 50 && lng > -10 && lng < 40)) ||
-                (lat < -40) // Southern ocean
-            );
-            
-            if (isLikelyOcean) {
-                // Check if near coast
-                for (let city of worldCities) {
-                    const distance = Math.sqrt(
-                        Math.pow((lat - city.lat) * 111, 2) + 
-                        Math.pow((lng - city.lng) * 111 * Math.cos(lat * Math.PI / 180), 2)
-                    );
-                    if (distance < 100) { // Within 100km of major city
-                        return 'coastal';
-                    }
-                }
-                return 'ocean';
-            }
-
-            // Check distance to major cities (in km)
+            // First, check distance to major cities (prioritize this)
             for (let city of worldCities) {
                 const distance = Math.sqrt(
                     Math.pow((lat - city.lat) * 111, 2) + 
                     Math.pow((lng - city.lng) * 111 * Math.cos(lat * Math.PI / 180), 2)
                 );
                 
+                // Direct city hit
                 if (distance < city.radius * 111) {
                     return { type: 'urban', city: city.name, density: city.pop };
                 }
+                // Suburban area around city
                 if (distance < city.radius * 111 * 3) {
                     return { type: 'suburban', city: city.name, density: city.pop * 0.4 };
                 }
             }
 
-            // Check for coastal areas
+            // Check if truly in middle of ocean (very conservative check)
+            // Only mark as ocean if far from all land
+            const isDeepOcean = (
+                // Pacific Ocean center
+                (lng > 160 || lng < -140) && Math.abs(lat) < 50 && 
+                !worldCities.some(c => {
+                    const d = Math.sqrt(Math.pow((lat - c.lat) * 111, 2) + Math.pow((lng - c.lng) * 111, 2));
+                    return d < 500; // Within 500km of any city
+                })
+            ) || (
+                // Atlantic Ocean center
+                lng > -60 && lng < -20 && lat > -30 && lat < 30 &&
+                !worldCities.some(c => {
+                    const d = Math.sqrt(Math.pow((lat - c.lat) * 111, 2) + Math.pow((lng - c.lng) * 111, 2));
+                    return d < 500;
+                })
+            );
+            
+            if (isDeepOcean) {
+                return { type: 'ocean', density: 0 };
+            }
+
+            // Check for coastal areas (near cities but not urban/suburban)
             const nearCoast = worldCities.some(city => {
                 const distance = Math.sqrt(
                     Math.pow((lat - city.lat) * 111, 2) + 
                     Math.pow((lng - city.lng) * 111 * Math.cos(lat * Math.PI / 180), 2)
                 );
-                return distance < 50;
+                return distance < 200; // Within 200km
             });
 
-            if (nearCoast) return { type: 'coastal', density: 3000 };
+            if (nearCoast) return { type: 'coastal', density: 2000 };
 
             // Mountainous regions
-            if (Math.abs(lat) > 60 || 
-                (lat > 25 && lat < 50 && lng > 60 && lng < 90) || // Himalayas
-                (lat > 30 && lat < 50 && lng > -125 && lng < -100)) { // Rockies
+            if (Math.abs(lat) > 65 || 
+                (lat > 25 && lat < 45 && lng > 65 && lng < 95) || // Himalayas
+                (lat > 35 && lat < 50 && lng > -120 && lng < -105)) { // Rockies
                 return { type: 'mountain', density: 50 };
             }
 
-            // Default to rural
-            return { type: 'rural', density: 150 };
+            // Default to rural (most land areas)
+            return { type: 'rural', density: 500 };
         }
 
         async function estimateCasualties(blastRadius, thermalRadius, lat, lng) {
@@ -746,10 +749,55 @@
         // Store current impact data for trajectory page
         let currentImpactData = null;
 
+        // Add impact flash effect to map
+        function flashMap() {
+            const flashDiv = document.createElement('div');
+            flashDiv.style.position = 'fixed';
+            flashDiv.style.top = '0';
+            flashDiv.style.left = '0';
+            flashDiv.style.width = '100%';
+            flashDiv.style.height = '100vh';
+            flashDiv.style.background = 'radial-gradient(circle, rgba(255,150,0,0.8) 0%, rgba(255,0,0,0.4) 100%)';
+            flashDiv.style.zIndex = '900';
+            flashDiv.style.pointerEvents = 'none';
+            flashDiv.style.animation = 'impactFlash 0.8s ease-out';
+            document.body.appendChild(flashDiv);
+            
+            setTimeout(() => document.body.removeChild(flashDiv), 800);
+        }
+
+        // Add shake effect to map
+        function shakeMap() {
+            const mapElement = document.getElementById('map');
+            mapElement.style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => {
+                mapElement.style.animation = '';
+            }, 500);
+        }
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes impactFlash {
+                0% { opacity: 1; }
+                100% { opacity: 0; }
+            }
+            @keyframes shake {
+                0%, 100% { transform: translate(0, 0); }
+                10%, 30%, 50%, 70%, 90% { transform: translate(-5px, 5px); }
+                20%, 40%, 60%, 80% { transform: translate(5px, -5px); }
+            }
+        `;
+        document.head.appendChild(style);
+
         // Handle map click
         map.on('click', async function(e) {
             instruction.classList.add('hidden');
             clearImpact();
+            
+            // Trigger impact effects
+            flashMap();
+            setTimeout(() => shakeMap(), 100);
             
             const diameter = parseFloat(diameterSlider.value);
             const velocity = parseFloat(velocitySlider.value);
