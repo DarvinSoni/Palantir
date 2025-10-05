@@ -431,17 +431,45 @@
                 <span id="comparison">-</span>
             </div>
 
+            <div class="stat" style="border-left-color: var(--warning);">
+                <div class="stat-label">Location Type</div>
+                <div class="stat-value" style="color: var(--warning); font-size: 14px;">
+                    <span id="locationType">-</span>
+                </div>
+            </div>
+
             <div class="stat" style="border-left-color: var(--danger);">
-                <div class="stat-label">Estimated Casualties</div>
+                <div class="stat-label">Total Estimated Casualties</div>
                 <div class="stat-value" style="color: var(--danger);">
                     <span id="casualties">-</span>
                 </div>
             </div>
 
-            <div class="stat" style="border-left-color: var(--warning);">
-                <div class="stat-label">Location Type</div>
-                <div class="stat-value" style="color: var(--warning); font-size: 14px;">
-                    <span id="locationType">-</span>
+            <div id="casualtyBreakdown" style="display: none; margin-top: 10px; font-size: 12px; padding: 12px; background: rgba(255, 68, 68, 0.05); border-radius: 8px; border: 1px solid rgba(255, 68, 68, 0.2);">
+                <div style="font-weight: bold; margin-bottom: 8px; color: var(--danger);">📊 Casualty Breakdown:</div>
+                <div style="margin-bottom: 5px;">
+                    <span style="color: var(--text-dim);">Population Density:</span> 
+                    <span id="popDensity" style="color: var(--text-light);">-</span>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <span style="color: var(--text-dim);">Blast Zone (95% fatal):</span> 
+                    <span id="blastCasualties" style="color: var(--text-light);">-</span>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <span style="color: var(--text-dim);">Thermal Zone (50% fatal):</span> 
+                    <span id="thermalCasualties" style="color: var(--text-light);">-</span>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <span style="color: var(--text-dim);">Building Collapse:</span> 
+                    <span id="buildingCasualties" style="color: var(--text-light);">-</span>
+                </div>
+                <div id="tsunamiRow" style="margin-bottom: 5px; display: none;">
+                    <span style="color: var(--text-dim);">Tsunami (coastal):</span> 
+                    <span id="tsunamiCasualties" style="color: var(--text-light);">-</span>
+                </div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: var(--text-dim);">Calculation:</span><br>
+                    <span id="calculation" style="color: var(--text-dim); font-size: 11px; line-height: 1.4;">-</span>
                 </div>
             </div>
 
@@ -701,37 +729,62 @@
             // Update location type display
             document.getElementById('locationType').textContent = description;
 
+            // Show breakdown panel
+            document.getElementById('casualtyBreakdown').style.display = 'block';
+            document.getElementById('popDensity').textContent = `${populationDensity.toLocaleString()} people/km²`;
+
             // If ocean, return minimal casualties
             if (locationType === 'ocean') {
+                document.getElementById('casualtyBreakdown').style.display = 'none';
                 return '0 people (Open Ocean)';
             }
 
-            // Calculate affected area
-            const blastArea = Math.PI * Math.pow(blastRadius, 2); // km²
-            const thermalArea = Math.PI * Math.pow(thermalRadius, 2); // km²
+            // Calculate affected areas (km²)
+            const blastArea = Math.PI * Math.pow(blastRadius, 2);
+            const thermalArea = Math.PI * Math.pow(thermalRadius, 2);
+            const thermalOnlyArea = Math.max(0, thermalArea - blastArea);
 
             // Get building density
-            const buildingDensity = locationFactors[locationType].buildingDensity;
+            const buildingDensity = locationFactors[locationType]?.buildingDensity || 0.3;
 
-            // Immediate blast casualties (95% fatality)
-            const blastCasualties = blastArea * populationDensity * 0.95;
-
-            // Thermal casualties (50% fatality outside blast zone)
-            const thermalOnlyCasualties = Math.max(0, thermalArea - blastArea) * populationDensity * 0.5;
-
-            // Building collapse casualties
-            const buildingCollapse = blastArea * populationDensity * buildingDensity * 0.3;
-
-            // Total estimated casualties
-            let totalCasualties = Math.floor(
-                blastCasualties + thermalOnlyCasualties + buildingCollapse
-            );
-
-            // Add tsunami factor for coastal regions
-            if (locationType === 'coastal' && blastRadius > 2) {
-                const tsunamiBonus = populationDensity * blastRadius * 10;
-                totalCasualties += Math.floor(tsunamiBonus);
+            // DETAILED CASUALTY CALCULATIONS
+            
+            // 1. Immediate blast casualties (95% fatality in blast zone)
+            const blastPopulation = blastArea * populationDensity;
+            const blastDeaths = Math.floor(blastPopulation * 0.95);
+            
+            // 2. Thermal casualties (50% fatality in thermal-only zone)
+            const thermalPopulation = thermalOnlyArea * populationDensity;
+            const thermalDeaths = Math.floor(thermalPopulation * 0.5);
+            
+            // 3. Building collapse casualties (additional 20% in blast zone with buildings)
+            const buildingCollapseDeaths = Math.floor(blastPopulation * buildingDensity * 0.2);
+            
+            // 4. Tsunami casualties for coastal regions
+            let tsunamiDeaths = 0;
+            const tsunamiRow = document.getElementById('tsunamiRow');
+            if (locationType === 'coastal' && blastRadius > 1) {
+                tsunamiDeaths = Math.floor(populationDensity * blastRadius * blastRadius * 8);
+                tsunamiRow.style.display = 'block';
+                document.getElementById('tsunamiCasualties').textContent = tsunamiDeaths.toLocaleString();
+            } else {
+                tsunamiRow.style.display = 'none';
             }
+
+            // Update breakdown display
+            document.getElementById('blastCasualties').textContent = blastDeaths.toLocaleString();
+            document.getElementById('thermalCasualties').textContent = thermalDeaths.toLocaleString();
+            document.getElementById('buildingCasualties').textContent = buildingCollapseDeaths.toLocaleString();
+
+            // Total casualties
+            const totalCasualties = blastDeaths + thermalDeaths + buildingCollapseDeaths + tsunamiDeaths;
+
+            // Show calculation formula
+            let calcText = `(${blastArea.toFixed(1)} km² × ${populationDensity} × 0.95) + `;
+            calcText += `(${thermalOnlyArea.toFixed(1)} km² × ${populationDensity} × 0.5) + `;
+            calcText += `(building collapse) `;
+            if (tsunamiDeaths > 0) calcText += `+ (tsunami)`;
+            document.getElementById('calculation').textContent = calcText;
 
             // Format output
             if (totalCasualties < 100) return `${totalCasualties} people`;
