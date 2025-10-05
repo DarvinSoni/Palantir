@@ -437,6 +437,17 @@
                     <span id="casualties">-</span>
                 </div>
             </div>
+
+            <div class="stat" style="border-left-color: var(--warning);">
+                <div class="stat-label">Location Type</div>
+                <div class="stat-value" style="color: var(--warning); font-size: 14px;">
+                    <span id="locationType">-</span>
+                </div>
+            </div>
+
+            <button id="trajectoryBtn" class="preset-button" style="margin-top: 15px; display: none;">
+                🚀 View Trajectory Animation
+            </button>
         </div>
     </div>
 
@@ -528,14 +539,110 @@
             }
         }
 
-        async function estimateCasualties(blastRadius) {
-            const avgPopDensity = 5000;
-            const affectedArea = Math.PI * Math.pow(blastRadius, 2);
-            const estimated = Math.floor(affectedArea * avgPopDensity);
+        // Location-based factors database (simplified)
+        const locationFactors = {
+            urban: {
+                populationDensity: 8000,
+                buildingDensity: 0.7,
+                description: 'Dense Urban Area'
+            },
+            suburban: {
+                populationDensity: 3000,
+                buildingDensity: 0.4,
+                description: 'Suburban Area'
+            },
+            rural: {
+                populationDensity: 100,
+                buildingDensity: 0.05,
+                description: 'Rural Area'
+            },
+            coastal: {
+                populationDensity: 5000,
+                buildingDensity: 0.5,
+                description: 'Coastal Region (Tsunami Risk)'
+            },
+            mountain: {
+                populationDensity: 50,
+                buildingDensity: 0.02,
+                description: 'Mountainous Terrain'
+            },
+            ocean: {
+                populationDensity: 0,
+                buildingDensity: 0,
+                description: 'Open Ocean'
+            }
+        };
+
+        // Determine location type based on coordinates (simplified heuristic)
+        function determineLocationType(lat, lng) {
+            // Check if near major cities (very simplified)
+            const majorCities = [
+                { lat: 40.7128, lng: -74.0060, type: 'urban' }, // NYC
+                { lat: 34.0522, lng: -118.2437, type: 'urban' }, // LA
+                { lat: 51.5074, lng: -0.1278, type: 'urban' }, // London
+                { lat: 35.6762, lng: 139.6503, type: 'urban' }, // Tokyo
+                { lat: 28.6139, lng: 77.2090, type: 'urban' }, // Delhi
+            ];
+
+            for (let city of majorCities) {
+                const distance = Math.sqrt(
+                    Math.pow(lat - city.lat, 2) + Math.pow(lng - city.lng, 2)
+                );
+                if (distance < 0.5) return 'urban';
+                if (distance < 2) return 'suburban';
+            }
+
+            // Check latitude for mountainous regions
+            if (Math.abs(lat) > 60) return 'rural';
+            if (Math.abs(lat) < 30 && Math.abs(lng) > 100) return 'coastal';
             
-            if (estimated < 1000) return `${estimated} people`;
-            if (estimated < 1000000) return `${(estimated / 1000).toFixed(0)}K people`;
-            return `${(estimated / 1000000).toFixed(1)}M people`;
+            // Default to rural for unknown locations
+            return 'rural';
+        }
+
+        async function estimateCasualties(blastRadius, thermalRadius, lat, lng) {
+            // Determine location type
+            const locationType = determineLocationType(lat, lng);
+            const factors = locationFactors[locationType];
+
+            // Update location type display
+            document.getElementById('locationType').textContent = factors.description;
+
+            // Calculate affected area
+            const blastArea = Math.PI * Math.pow(blastRadius, 2); // km²
+            const thermalArea = Math.PI * Math.pow(thermalRadius, 2); // km²
+
+            // Calculate casualties with location-specific factors
+            const populationDensity = factors.populationDensity;
+            const buildingDensity = factors.buildingDensity;
+
+            // Immediate blast casualties (95% fatality)
+            const blastCasualties = blastArea * populationDensity * 0.95;
+
+            // Thermal casualties (50% fatality outside blast zone)
+            const thermalOnlyCasualties = (thermalArea - blastArea) * populationDensity * 0.5;
+
+            // Building collapse casualties
+            const buildingCollapse = blastArea * populationDensity * buildingDensity * 0.3;
+
+            // Total estimated casualties
+            const totalCasualties = Math.floor(
+                blastCasualties + thermalOnlyCasualties + buildingCollapse
+            );
+
+            // Add tsunami factor for coastal regions
+            let tsunamiBonus = 0;
+            if (locationType === 'coastal' && blastRadius > 2) {
+                tsunamiBonus = populationDensity * blastRadius * 10;
+            }
+
+            const finalCasualties = Math.floor(totalCasualties + tsunamiBonus);
+
+            // Format output
+            if (finalCasualties < 100) return `${finalCasualties} people`;
+            if (finalCasualties < 1000) return `~${Math.ceil(finalCasualties / 100) * 100} people`;
+            if (finalCasualties < 1000000) return `~${(finalCasualties / 1000).toFixed(1)}K people`;
+            return `~${(finalCasualties / 1000000).toFixed(2)}M people`;
         }
 
         // Clear previous impact markers
@@ -543,6 +650,9 @@
             currentImpactMarkers.forEach(marker => map.removeLayer(marker));
             currentImpactMarkers = [];
         }
+
+        // Store current impact data for trajectory page
+        let currentImpactData = null;
 
         // Handle map click
         map.on('click', async function(e) {
@@ -557,6 +667,17 @@
             
             const impact = calculateImpact(diameter, velocity, angle, density, targetType);
             
+            // Store impact data
+            currentImpactData = {
+                diameter: diameter,
+                velocity: velocity,
+                angle: angle,
+                density: density,
+                energy: impact.energy,
+                lat: e.latlng.lat,
+                lng: e.latlng.lng
+            };
+            
             // Update UI
             document.getElementById('energy').textContent = impact.energy.toExponential(2);
             document.getElementById('crater').textContent = impact.craterDiameter.toFixed(0);
@@ -566,8 +687,17 @@
             document.getElementById('seismic').textContent = impact.seismic.toFixed(1);
             document.getElementById('comparison').textContent = getEnergyComparison(impact.energy);
             
-            const casualties = await estimateCasualties(impact.blastRadius);
+            // Calculate casualties with location-based factors
+            const casualties = await estimateCasualties(
+                impact.blastRadius, 
+                impact.thermalRadius,
+                e.latlng.lat,
+                e.latlng.lng
+            );
             document.getElementById('casualties').textContent = casualties;
+
+            // Show trajectory button
+            document.getElementById('trajectoryBtn').style.display = 'block';
             
             // Draw impact zones
             const zones = [
@@ -648,12 +778,32 @@
             });
         });
 
+        // Trajectory button handler
+        document.getElementById('trajectoryBtn').addEventListener('click', () => {
+            if (currentImpactData) {
+                const params = new URLSearchParams({
+                    diameter: currentImpactData.diameter,
+                    velocity: currentImpactData.velocity,
+                    angle: currentImpactData.angle,
+                    density: currentImpactData.density,
+                    energy: currentImpactData.energy,
+                    lat: currentImpactData.lat,
+                    lng: currentImpactData.lng
+                });
+                window.location.href = `trajectory.html?${params.toString()}`;
+            }
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'r' || e.key === 'R') {
                 document.getElementById('random-btn').click();
             } else if (e.key === 'c' || e.key === 'C') {
                 clearImpact();
+            } else if (e.key === 't' || e.key === 'T') {
+                if (currentImpactData) {
+                    document.getElementById('trajectoryBtn').click();
+                }
             }
         });
     </script>

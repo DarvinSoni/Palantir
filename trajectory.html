@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palantir - Meteor Trajectory Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #ff4444;
+            --secondary-color: #ff8800;
+            --bg-dark: #0a0e27;
+            --bg-panel: rgba(15, 20, 45, 0.95);
+            --text-light: #ffffff;
+            --text-dim: #a0a0a0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: var(--text-light);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        .info-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            max-width: 350px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        .back-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 20px;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 68, 68, 0.4);
+        }
+
+        .timeline {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .phase {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+
+        .time-remaining {
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .legend {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="info-overlay">
+        <h1>🌠 Trajectory Data</h1>
+        <div class="stat">
+            <div class="stat-label">Asteroid Name</div>
+            <div class="stat-value" id="asteroidName">-</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Diameter</div>
+            <div class="stat-value" id="diameter">-</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Velocity</div>
+            <div class="stat-value" id="velocity">-</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Impact Angle</div>
+            <div class="stat-value" id="angle">-</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Impact Energy</div>
+            <div class="stat-value" id="energy">-</div>
+        </div>
+        <button class="back-button" onclick="window.location.href='index.html'">← Back to Simulator</button>
+    </div>
+
+    <div class="legend">
+        <h3 style="font-size: 14px; margin-bottom: 15px;">Legend</h3>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #87CEEB;"></div>
+            <span>Earth Atmosphere</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #00ff00;"></div>
+            <span>Earth Surface</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(45deg, #ff6600, #ff0000);"></div>
+            <span>Asteroid</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffff00;"></div>
+            <span>Trajectory Path</span>
+        </div>
+    </div>
+
+    <div class="timeline">
+        <div class="phase" id="phase">Space Approach</div>
+        <div class="time-remaining" id="timeRemaining">Time to Impact: --</div>
+    </div>
+
+    <script>
+        // Get data from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const diameter = parseFloat(urlParams.get('diameter')) || 100;
+        const velocity = parseFloat(urlParams.get('velocity')) || 20;
+        const angle = parseFloat(urlParams.get('angle')) || 45;
+        const density = parseFloat(urlParams.get('density')) || 3000;
+        const energy = parseFloat(urlParams.get('energy')) || 0;
+
+        // Update info panel
+        document.getElementById('asteroidName').textContent = `NEO-${Date.now().toString().slice(-6)}`;
+        document.getElementById('diameter').textContent = `${diameter} meters`;
+        document.getElementById('velocity').textContent = `${velocity} km/s`;
+        document.getElementById('angle').textContent = `${angle}°`;
+        document.getElementById('energy').textContent = energy > 0 ? `${energy.toExponential(2)} MT` : '-';
+
+        // Three.js setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 200, 500);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Create Earth
+        const earthGeometry = new THREE.SphereGeometry(100, 64, 64);
+        const earthMaterial = new THREE.MeshPhongMaterial({
+            color: 0x00ff00,
+            emissive: 0x002200,
+            shininess: 10
+        });
+        const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+        scene.add(earth);
+
+        // Create atmosphere
+        const atmosphereGeometry = new THREE.SphereGeometry(120, 64, 64);
+        const atmosphereMaterial = new THREE.MeshPhongMaterial({
+            color: 0x87CEEB,
+            transparent: true,
+            opacity: 0.2,
+            side: THREE.BackSide
+        });
+        const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+        scene.add(atmosphere);
+
+        // Create asteroid
+        const asteroidGeometry = new THREE.SphereGeometry(diameter / 20, 16, 16);
+        const asteroidMaterial = new THREE.MeshPhongMaterial({
+            color: 0xff6600,
+            emissive: 0xff3300,
+            emissiveIntensity: 0.5
+        });
+        const asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+        scene.add(asteroid);
+
+        // Create trajectory line
+        const trajectoryPoints = [];
+        const angleRad = (angle * Math.PI) / 180;
+        const startDistance = 800;
+        
+        for (let i = 0; i <= 100; i++) {
+            const t = i / 100;
+            const distance = startDistance * (1 - t);
+            const height = distance * Math.sin(angleRad);
+            const horizontal = distance * Math.cos(angleRad);
+            
+            trajectoryPoints.push(new THREE.Vector3(horizontal, height, 0));
+        }
+
+        const trajectoryGeometry = new THREE.BufferGeometry().setFromPoints(trajectoryPoints);
+        const trajectoryMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xffff00,
+            linewidth: 2
+        });
+        const trajectoryLine = new THREE.Line(trajectoryGeometry, trajectoryMaterial);
+        scene.add(trajectoryLine);
+
+        // Add lights
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(500, 500, 500);
+        scene.add(sunLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1, 1000);
+        pointLight.position.set(0, 0, 300);
+        scene.add(pointLight);
+
+        // Add stars
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 2 });
+        const starsVertices = [];
+
+        for (let i = 0; i < 5000; i++) {
+            const x = (Math.random() - 0.5) * 4000;
+            const y = (Math.random() - 0.5) * 4000;
+            const z = (Math.random() - 0.5) * 4000;
+            starsVertices.push(x, y, z);
+        }
+
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        // Animation
+        let time = 0;
+        const totalTime = 10; // seconds for full trajectory
+        let impacted = false;
+        const phases = [
+            { time: 0, name: 'Space Approach', distance: 'Entering atmosphere' },
+            { time: 3, name: 'Atmospheric Entry', distance: 'Heating up' },
+            { time: 6, name: 'Terminal Phase', distance: 'Final approach' },
+            { time: 9, name: 'Impact Imminent', distance: 'Seconds to impact' }
+        ];
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.016; // ~60fps
+            const progress = Math.min(time / totalTime, 1);
+
+            // Update asteroid position
+            if (progress < 1) {
+                const index = Math.floor(progress * trajectoryPoints.length);
+                const point = trajectoryPoints[index];
+                asteroid.position.copy(point);
+
+                // Rotate asteroid
+                asteroid.rotation.x += 0.05;
+                asteroid.rotation.y += 0.03;
+
+                // Update timeline
+                const timeRemaining = Math.max(0, totalTime - time);
+                document.getElementById('timeRemaining').textContent = `Time to Impact: ${timeRemaining.toFixed(1)}s`;
+
+                // Update phase
+                const currentPhase = phases.filter(p => time >= p.time).pop();
+                if (currentPhase) {
+                    document.getElementById('phase').textContent = currentPhase.name;
+                }
+
+                // Create heat trail
+                if (progress > 0.3 && Math.random() < 0.3) {
+                    const trailGeometry = new THREE.SphereGeometry(diameter / 40, 8, 8);
+                    const trailMaterial = new THREE.MeshBasicMaterial({
+                        color: Math.random() < 0.5 ? 0xff6600 : 0xffaa00,
+                        transparent: true,
+                        opacity: 0.6
+                    });
+                    const trail = new THREE.Mesh(trailGeometry, trailMaterial);
+                    trail.position.copy(asteroid.position);
+                    scene.add(trail);
+
+                    setTimeout(() => scene.remove(trail), 500);
+                }
+            } else if (!impacted) {
+                // Impact!
+                impacted = true;
+                document.getElementById('phase').textContent = '💥 IMPACT!';
+                document.getElementById('timeRemaining').textContent = 'Collision occurred';
+                
+                // Create explosion
+                for (let i = 0; i < 100; i++) {
+                    const particleGeometry = new THREE.SphereGeometry(2, 8, 8);
+                    const particleMaterial = new THREE.MeshBasicMaterial({
+                        color: Math.random() < 0.5 ? 0xff3300 : 0xffaa00
+                    });
+                    const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                    
+                    particle.position.copy(asteroid.position);
+                    particle.userData = {
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 10,
+                            (Math.random() - 0.5) * 10,
+                            (Math.random() - 0.5) * 10
+                        )
+                    };
+                    
+                    scene.add(particle);
+                    
+                    setTimeout(() => scene.remove(particle), 2000);
+                }
+            }
+
+            // Rotate Earth slowly
+            earth.rotation.y += 0.001;
+            atmosphere.rotation.y += 0.001;
+
+            // Camera orbit
+            const cameraAngle = time * 0.1;
+            camera.position.x = Math.cos(cameraAngle) * 500;
+            camera.position.z = Math.sin(cameraAngle) * 500;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
