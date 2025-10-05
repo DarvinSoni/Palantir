@@ -53,30 +53,33 @@ An enhanced, interactive **3D web-based** asteroid impact simulator that visuali
 ## How to Use
 
 1. **Open `index.html`** in any modern web browser (Chrome, Firefox, Safari, Edge)
-2. **Explore the 3D Globe**: Click and drag to rotate, scroll to zoom in/out
-3. **Adjust Parameters**: Use the left control panel to set asteroid properties
-4. **Drop Your Asteroid**: Click anywhere on the 3D globe to create an impact
-5. **Watch the Destruction**: See buildings destroyed, debris scatter, and damage zones appear
-6. **View Results**: Check the right panel for detailed impact statistics
-7. **Change Camera**: Toggle between orbital and ground-level views
-8. **Try Presets**: Click famous asteroid buttons for historical impacts
-9. **Experiment**: Use the "Random Asteroid" button for quick simulations
-10. **Clear Impact**: Click "Clear Impact" or press 'C' to reset
+2. **Adjust Parameters**: Use the left control panel to set asteroid properties
+3. **Click the Map**: Drop your asteroid anywhere on Earth
+4. **View Results**: See impact zones and casualty estimates
+5. **See Location Details**: Check the "Location Type" to understand the area
+6. **View Trajectory**: Click "🚀 View Trajectory Animation" button
+7. **Watch in 3D**: See the meteor approach and impact in full 3D animation
+8. **Return**: Click "← Back to Simulator" to return to main page
+9. **Try Presets**: Click famous asteroid buttons for historical impacts
+10. **Experiment**: Use the "Random Asteroid" button for quick simulations
 
 ### Keyboard Shortcuts
 - **R**: Generate random asteroid parameters
 - **C**: Clear current impact visualization
-- **Mouse Drag**: Rotate the globe
+- **T**: View trajectory animation (after impact)
+- **Mouse Drag**: Pan the map
 - **Mouse Scroll**: Zoom in/out
-- **Right Click + Drag**: Pan the camera
 
 ### What You'll See
 When you drop an asteroid, you'll witness:
 - 💥 **Impact Point**: Animated marker showing exact impact location
 - ⭕ **Damage Zones**: Three color-coded circles (fireball, blast, thermal)
 - 📊 **Real-time Statistics**: Detailed impact calculations
+- 🏙️ **Location Type**: See if it's urban, rural, coastal, etc.
+- 👥 **Dynamic Casualties**: Location-based casualty estimates
 - 🔍 **Auto-zoom**: Map automatically frames the entire impact area
 - 🎯 **Interactive Zones**: Click circles for more information
+- 🚀 **Trajectory Button**: Opens 3D visualization of meteor path
 
 ## System Requirements
 
