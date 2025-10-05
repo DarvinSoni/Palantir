@@ -573,76 +573,168 @@
             }
         };
 
-        // Determine location type based on coordinates (simplified heuristic)
-        function determineLocationType(lat, lng) {
-            // Check if near major cities (very simplified)
-            const majorCities = [
-                { lat: 40.7128, lng: -74.0060, type: 'urban' }, // NYC
-                { lat: 34.0522, lng: -118.2437, type: 'urban' }, // LA
-                { lat: 51.5074, lng: -0.1278, type: 'urban' }, // London
-                { lat: 35.6762, lng: 139.6503, type: 'urban' }, // Tokyo
-                { lat: 28.6139, lng: 77.2090, type: 'urban' }, // Delhi
-            ];
+        // Comprehensive major cities database with population density
+        const worldCities = [
+            // Americas
+            { name: 'New York', lat: 40.7128, lng: -74.0060, pop: 10000, type: 'urban', radius: 0.3 },
+            { name: 'Los Angeles', lat: 34.0522, lng: -118.2437, pop: 8000, type: 'urban', radius: 0.4 },
+            { name: 'Mexico City', lat: 19.4326, lng: -99.1332, pop: 12000, type: 'urban', radius: 0.35 },
+            { name: 'São Paulo', lat: -23.5505, lng: -46.6333, pop: 11000, type: 'urban', radius: 0.35 },
+            { name: 'Chicago', lat: 41.8781, lng: -87.6298, pop: 4500, type: 'urban', radius: 0.25 },
+            { name: 'Toronto', lat: 43.6532, lng: -79.3832, pop: 4200, type: 'urban', radius: 0.25 },
+            
+            // Europe
+            { name: 'London', lat: 51.5074, lng: -0.1278, pop: 5700, type: 'urban', radius: 0.3 },
+            { name: 'Paris', lat: 48.8566, lng: 2.3522, pop: 5500, type: 'urban', radius: 0.25 },
+            { name: 'Moscow', lat: 55.7558, lng: 37.6173, pop: 5000, type: 'urban', radius: 0.3 },
+            { name: 'Istanbul', lat: 41.0082, lng: 28.9784, pop: 7000, type: 'urban', radius: 0.35 },
+            { name: 'Berlin', lat: 52.5200, lng: 13.4050, pop: 4000, type: 'urban', radius: 0.2 },
+            { name: 'Madrid', lat: 40.4168, lng: -3.7038, pop: 3800, type: 'urban', radius: 0.2 },
+            
+            // Asia
+            { name: 'Tokyo', lat: 35.6762, lng: 139.6503, pop: 15000, type: 'urban', radius: 0.4 },
+            { name: 'Delhi', lat: 28.6139, lng: 77.2090, pop: 13000, type: 'urban', radius: 0.35 },
+            { name: 'Shanghai', lat: 31.2304, lng: 121.4737, pop: 12000, type: 'urban', radius: 0.35 },
+            { name: 'Mumbai', lat: 19.0760, lng: 72.8777, pop: 12500, type: 'urban', radius: 0.3 },
+            { name: 'Beijing', lat: 39.9042, lng: 116.4074, pop: 11000, type: 'urban', radius: 0.35 },
+            { name: 'Seoul', lat: 37.5665, lng: 126.9780, pop: 10000, type: 'urban', radius: 0.3 },
+            { name: 'Jakarta', lat: -6.2088, lng: 106.8456, pop: 11500, type: 'urban', radius: 0.35 },
+            { name: 'Bangkok', lat: 13.7563, lng: 100.5018, pop: 6000, type: 'urban', radius: 0.25 },
+            { name: 'Singapore', lat: 1.3521, lng: 103.8198, pop: 8000, type: 'urban', radius: 0.15 },
+            
+            // Middle East
+            { name: 'Dubai', lat: 25.2048, lng: 55.2708, pop: 6500, type: 'urban', radius: 0.2 },
+            { name: 'Cairo', lat: 30.0444, lng: 31.2357, pop: 10000, type: 'urban', radius: 0.3 },
+            
+            // Africa
+            { name: 'Lagos', lat: 6.5244, lng: 3.3792, pop: 8000, type: 'urban', radius: 0.25 },
+            { name: 'Johannesburg', lat: -26.2041, lng: 28.0473, pop: 4500, type: 'urban', radius: 0.25 },
+            
+            // Oceania
+            { name: 'Sydney', lat: -33.8688, lng: 151.2093, pop: 4000, type: 'urban', radius: 0.25 },
+            { name: 'Melbourne', lat: -37.8136, lng: 144.9631, pop: 3500, type: 'urban', radius: 0.2 }
+        ];
 
-            for (let city of majorCities) {
-                const distance = Math.sqrt(
-                    Math.pow(lat - city.lat, 2) + Math.pow(lng - city.lng, 2)
-                );
-                if (distance < 0.5) return 'urban';
-                if (distance < 2) return 'suburban';
+        // Determine location type with better accuracy
+        function determineLocationType(lat, lng) {
+            // Check if coordinates are in ocean (very rough check)
+            const isLikelyOcean = (
+                (Math.abs(lng) > 20 && Math.abs(lng) < 180 && Math.abs(lat) < 60 && 
+                 (lng < -30 || lng > 40) && !(lat > 30 && lat < 50 && lng > -10 && lng < 40)) ||
+                (lat < -40) // Southern ocean
+            );
+            
+            if (isLikelyOcean) {
+                // Check if near coast
+                for (let city of worldCities) {
+                    const distance = Math.sqrt(
+                        Math.pow((lat - city.lat) * 111, 2) + 
+                        Math.pow((lng - city.lng) * 111 * Math.cos(lat * Math.PI / 180), 2)
+                    );
+                    if (distance < 100) { // Within 100km of major city
+                        return 'coastal';
+                    }
+                }
+                return 'ocean';
             }
 
-            // Check latitude for mountainous regions
-            if (Math.abs(lat) > 60) return 'rural';
-            if (Math.abs(lat) < 30 && Math.abs(lng) > 100) return 'coastal';
-            
-            // Default to rural for unknown locations
-            return 'rural';
+            // Check distance to major cities (in km)
+            for (let city of worldCities) {
+                const distance = Math.sqrt(
+                    Math.pow((lat - city.lat) * 111, 2) + 
+                    Math.pow((lng - city.lng) * 111 * Math.cos(lat * Math.PI / 180), 2)
+                );
+                
+                if (distance < city.radius * 111) {
+                    return { type: 'urban', city: city.name, density: city.pop };
+                }
+                if (distance < city.radius * 111 * 3) {
+                    return { type: 'suburban', city: city.name, density: city.pop * 0.4 };
+                }
+            }
+
+            // Check for coastal areas
+            const nearCoast = worldCities.some(city => {
+                const distance = Math.sqrt(
+                    Math.pow((lat - city.lat) * 111, 2) + 
+                    Math.pow((lng - city.lng) * 111 * Math.cos(lat * Math.PI / 180), 2)
+                );
+                return distance < 50;
+            });
+
+            if (nearCoast) return { type: 'coastal', density: 3000 };
+
+            // Mountainous regions
+            if (Math.abs(lat) > 60 || 
+                (lat > 25 && lat < 50 && lng > 60 && lng < 90) || // Himalayas
+                (lat > 30 && lat < 50 && lng > -125 && lng < -100)) { // Rockies
+                return { type: 'mountain', density: 50 };
+            }
+
+            // Default to rural
+            return { type: 'rural', density: 150 };
         }
 
         async function estimateCasualties(blastRadius, thermalRadius, lat, lng) {
-            // Determine location type
-            const locationType = determineLocationType(lat, lng);
-            const factors = locationFactors[locationType];
+            // Determine location type with improved detection
+            const locationResult = determineLocationType(lat, lng);
+            
+            let locationType, populationDensity, description, cityName;
+            
+            if (typeof locationResult === 'object' && locationResult.type) {
+                locationType = locationResult.type;
+                populationDensity = locationResult.density || locationFactors[locationType].populationDensity;
+                cityName = locationResult.city;
+                description = cityName ? 
+                    `${locationFactors[locationType].description} (${cityName})` : 
+                    locationFactors[locationType].description;
+            } else {
+                locationType = locationResult;
+                const factors = locationFactors[locationType];
+                populationDensity = factors.populationDensity;
+                description = factors.description;
+            }
 
             // Update location type display
-            document.getElementById('locationType').textContent = factors.description;
+            document.getElementById('locationType').textContent = description;
+
+            // If ocean, return minimal casualties
+            if (locationType === 'ocean') {
+                return '0 people (Open Ocean)';
+            }
 
             // Calculate affected area
             const blastArea = Math.PI * Math.pow(blastRadius, 2); // km²
             const thermalArea = Math.PI * Math.pow(thermalRadius, 2); // km²
 
-            // Calculate casualties with location-specific factors
-            const populationDensity = factors.populationDensity;
-            const buildingDensity = factors.buildingDensity;
+            // Get building density
+            const buildingDensity = locationFactors[locationType].buildingDensity;
 
             // Immediate blast casualties (95% fatality)
             const blastCasualties = blastArea * populationDensity * 0.95;
 
             // Thermal casualties (50% fatality outside blast zone)
-            const thermalOnlyCasualties = (thermalArea - blastArea) * populationDensity * 0.5;
+            const thermalOnlyCasualties = Math.max(0, thermalArea - blastArea) * populationDensity * 0.5;
 
             // Building collapse casualties
             const buildingCollapse = blastArea * populationDensity * buildingDensity * 0.3;
 
             // Total estimated casualties
-            const totalCasualties = Math.floor(
+            let totalCasualties = Math.floor(
                 blastCasualties + thermalOnlyCasualties + buildingCollapse
             );
 
             // Add tsunami factor for coastal regions
-            let tsunamiBonus = 0;
             if (locationType === 'coastal' && blastRadius > 2) {
-                tsunamiBonus = populationDensity * blastRadius * 10;
+                const tsunamiBonus = populationDensity * blastRadius * 10;
+                totalCasualties += Math.floor(tsunamiBonus);
             }
 
-            const finalCasualties = Math.floor(totalCasualties + tsunamiBonus);
-
             // Format output
-            if (finalCasualties < 100) return `${finalCasualties} people`;
-            if (finalCasualties < 1000) return `~${Math.ceil(finalCasualties / 100) * 100} people`;
-            if (finalCasualties < 1000000) return `~${(finalCasualties / 1000).toFixed(1)}K people`;
-            return `~${(finalCasualties / 1000000).toFixed(2)}M people`;
+            if (totalCasualties < 100) return `${totalCasualties} people`;
+            if (totalCasualties < 1000) return `~${Math.ceil(totalCasualties / 100) * 100} people`;
+            if (totalCasualties < 1000000) return `~${(totalCasualties / 1000).toFixed(1)}K people`;
+            return `~${(totalCasualties / 1000000).toFixed(2)}M people`;
         }
 
         // Clear previous impact markers

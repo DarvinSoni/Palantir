@@ -237,14 +237,50 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        // Create Earth
+        // Create Earth with texture
         const earthGeometry = new THREE.SphereGeometry(100, 64, 64);
         const earthMaterial = new THREE.MeshPhongMaterial({
-            color: 0x00ff00,
-            emissive: 0x002200,
-            shininess: 10
+            color: 0x2233ff,
+            emissive: 0x001133,
+            shininess: 10,
+            specular: 0x333333
         });
         const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+        
+        // Add texture coordinates for land/sea appearance
+        const textureCanvas = document.createElement('canvas');
+        textureCanvas.width = 512;
+        textureCanvas.height = 256;
+        const ctx = textureCanvas.getContext('2d');
+        
+        // Create procedural Earth-like texture
+        for (let y = 0; y < 256; y++) {
+            for (let x = 0; x < 512; x++) {
+                const noise = Math.random() * 30;
+                const lat = (y / 256) * 180 - 90;
+                const lng = (x / 512) * 360 - 180;
+                
+                // Simple land/ocean pattern
+                const isLand = (
+                    (lng > -100 && lng < -60 && lat > 20 && lat < 50) || // North America
+                    (lng > -20 && lng < 50 && lat > 35 && lat < 70) || // Europe
+                    (lng > 60 && lng < 140 && lat > 5 && lat < 60) || // Asia
+                    (lng > -80 && lng < -35 && lat > -55 && lat < 10) // South America
+                );
+                
+                if (isLand) {
+                    ctx.fillStyle = `rgb(${34 + noise}, ${139 + noise}, ${34 + noise})`; // Green land
+                } else {
+                    ctx.fillStyle = `rgb(${25 + noise}, ${50 + noise}, ${200 + noise})`; // Blue ocean
+                }
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        
+        const earthTexture = new THREE.CanvasTexture(textureCanvas);
+        earthMaterial.map = earthTexture;
+        earthMaterial.needsUpdate = true;
+        
         scene.add(earth);
 
         // Create atmosphere
@@ -258,12 +294,32 @@
         const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
         scene.add(atmosphere);
 
-        // Create asteroid
+        // Create asteroid with rocky texture
         const asteroidGeometry = new THREE.SphereGeometry(diameter / 20, 16, 16);
+        
+        // Create rocky texture for asteroid
+        const asteroidCanvas = document.createElement('canvas');
+        asteroidCanvas.width = 128;
+        asteroidCanvas.height = 128;
+        const astCtx = asteroidCanvas.getContext('2d');
+        
+        // Create rocky pattern
+        for (let y = 0; y < 128; y++) {
+            for (let x = 0; x < 128; x++) {
+                const noise = Math.random() * 60;
+                const gray = 80 + noise;
+                astCtx.fillStyle = `rgb(${gray}, ${gray * 0.7}, ${gray * 0.5})`;
+                astCtx.fillRect(x, y, 1, 1);
+            }
+        }
+        
+        const asteroidTexture = new THREE.CanvasTexture(asteroidCanvas);
         const asteroidMaterial = new THREE.MeshPhongMaterial({
-            color: 0xff6600,
-            emissive: 0xff3300,
-            emissiveIntensity: 0.5
+            map: asteroidTexture,
+            color: 0xaa6644,
+            emissive: 0x331100,
+            emissiveIntensity: 0.3,
+            roughness: 0.9
         });
         const asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
         scene.add(asteroid);
@@ -375,27 +431,115 @@
                 document.getElementById('phase').textContent = '💥 IMPACT!';
                 document.getElementById('timeRemaining').textContent = 'Collision occurred';
                 
-                // Create explosion
-                for (let i = 0; i < 100; i++) {
-                    const particleGeometry = new THREE.SphereGeometry(2, 8, 8);
+                // FLASH EFFECT
+                const flashOverlay = document.createElement('div');
+                flashOverlay.style.position = 'fixed';
+                flashOverlay.style.top = '0';
+                flashOverlay.style.left = '0';
+                flashOverlay.style.width = '100%';
+                flashOverlay.style.height = '100%';
+                flashOverlay.style.background = 'white';
+                flashOverlay.style.opacity = '1';
+                flashOverlay.style.zIndex = '9999';
+                flashOverlay.style.pointerEvents = 'none';
+                flashOverlay.style.transition = 'opacity 0.5s';
+                document.body.appendChild(flashOverlay);
+                
+                setTimeout(() => {
+                    flashOverlay.style.opacity = '0';
+                    setTimeout(() => document.body.removeChild(flashOverlay), 500);
+                }, 100);
+                
+                // BOOM SOUND (web audio)
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const createBoom = () => {
+                    const now = audioCtx.currentTime;
+                    
+                    // Low frequency boom
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(50, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(20, now + 0.5);
+                    
+                    gainNode.gain.setValueAtTime(1, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 1);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.start(now);
+                    oscillator.stop(now + 1);
+                    
+                    // Add noise for impact
+                    const bufferSize = audioCtx.sampleRate * 0.5;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    
+                    const noiseSource = audioCtx.createBufferSource();
+                    const noiseGain = audioCtx.createGain();
+                    noiseSource.buffer = buffer;
+                    noiseGain.gain.setValueAtTime(0.3, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    
+                    noiseSource.connect(noiseGain);
+                    noiseGain.connect(audioCtx.destination);
+                    noiseSource.start(now);
+                };
+                
+                createBoom();
+                
+                // Create massive explosion
+                for (let i = 0; i < 200; i++) {
+                    const particleGeometry = new THREE.SphereGeometry(3, 8, 8);
                     const particleMaterial = new THREE.MeshBasicMaterial({
-                        color: Math.random() < 0.5 ? 0xff3300 : 0xffaa00
+                        color: Math.random() < 0.3 ? 0xffff00 : (Math.random() < 0.5 ? 0xff3300 : 0xffaa00)
                     });
                     const particle = new THREE.Mesh(particleGeometry, particleMaterial);
                     
                     particle.position.copy(asteroid.position);
                     particle.userData = {
                         velocity: new THREE.Vector3(
-                            (Math.random() - 0.5) * 10,
-                            (Math.random() - 0.5) * 10,
-                            (Math.random() - 0.5) * 10
+                            (Math.random() - 0.5) * 15,
+                            (Math.random() - 0.5) * 15,
+                            (Math.random() - 0.5) * 15
                         )
                     };
                     
                     scene.add(particle);
                     
-                    setTimeout(() => scene.remove(particle), 2000);
+                    setTimeout(() => scene.remove(particle), 3000);
                 }
+                
+                // Create shockwave ring
+                const ringGeometry = new THREE.RingGeometry(1, 5, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff6600,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const shockwave = new THREE.Mesh(ringGeometry, ringMaterial);
+                shockwave.position.copy(asteroid.position);
+                shockwave.lookAt(0, 0, 0);
+                scene.add(shockwave);
+                
+                // Animate shockwave
+                let shockwaveScale = 1;
+                const shockwaveInterval = setInterval(() => {
+                    shockwaveScale += 5;
+                    shockwave.scale.set(shockwaveScale, shockwaveScale, 1);
+                    shockwave.material.opacity -= 0.05;
+                    
+                    if (shockwave.material.opacity <= 0) {
+                        scene.remove(shockwave);
+                        clearInterval(shockwaveInterval);
+                    }
+                }, 50);
             }
 
             // Rotate Earth slowly
