@@ -365,6 +365,9 @@
         </div>
 
         <button id="random-btn">🎲 Random Asteroid</button>
+        <button id="mitigationMainBtn" class="preset-button" style="background: linear-gradient(135deg, #00ff88, #00ccff); color: #000; font-weight: bold;">
+            🛡️ Mitigation Strategies
+        </button>
 
         <div class="control-group" style="margin-top: 20px;">
             <label>Famous Asteroids</label>
@@ -971,7 +974,7 @@
             });
         });
 
-        // Trajectory button handler
+        // Trajectory button handler (after impact)
         document.getElementById('trajectoryBtn').addEventListener('click', () => {
             if (currentImpactData) {
                 const params = new URLSearchParams({
@@ -987,6 +990,30 @@
             }
         });
 
+        // Mitigation button handler (after impact)
+        document.getElementById('mitigationBtn').addEventListener('click', () => {
+            if (currentImpactData) {
+                const params = new URLSearchParams({
+                    diameter: currentImpactData.diameter,
+                    velocity: currentImpactData.velocity,
+                    density: currentImpactData.density,
+                    energy: currentImpactData.energy
+                });
+                window.location.href = `mitigation.html?${params.toString()}`;
+            }
+        });
+
+        // Mitigation main button handler (always available)
+        document.getElementById('mitigationMainBtn').addEventListener('click', () => {
+            const params = new URLSearchParams({
+                diameter: parseFloat(diameterSlider.value),
+                velocity: parseFloat(velocitySlider.value),
+                density: parseFloat(compositionSelect.value),
+                energy: 0
+            });
+            window.location.href = `mitigation.html?${params.toString()}`;
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'r' || e.key === 'R') {
@@ -1000,18 +1027,8 @@
             } else if (e.key === 'm' || e.key === 'M') {
                 if (currentImpactData) {
                     document.getElementById('mitigationBtn').click();
-                }
-            }
-        });
-    </script>
-</body>
-</html>
-cument.getElementById('random-btn').click();
-            } else if (e.key === 'c' || e.key === 'C') {
-                clearImpact();
-            } else if (e.key === 't' || e.key === 'T') {
-                if (currentImpactData) {
-                    document.getElementById('trajectoryBtn').click();
+                } else {
+                    document.getElementById('mitigationMainBtn').click();
                 }
             }
         });

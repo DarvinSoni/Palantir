@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Palantir - Mitigation Strategy Evaluation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -269,9 +270,102 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .visualization-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 700px;
+            height: 500px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 2px solid var(--success-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            display: none;
+            overflow: hidden;
+        }
+
+        .visualization-panel.active {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .viz-header {
+            padding: 15px 20px;
+            background: linear-gradient(135deg, var(--success-color), #00ccff);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #000;
+        }
+
+        .viz-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .close-viz {
+            background: rgba(0, 0, 0, 0.2);
+            border: none;
+            color: #000;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+            font-weight: bold;
+        }
+
+        .close-viz:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        #vizCanvas {
+            width: 100%;
+            height: calc(100% - 60px);
+            display: block;
+        }
+
+        .viz-button {
+            padding: 10px 20px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success-color);
+            border-radius: 6px;
+            color: var(--success-color);
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .viz-button:hover {
+            background: rgba(0, 255, 136, 0.2);
+        }
     </style>
 </head>
 <body>
+    <div class="visualization-panel" id="visualizationPanel">
+        <div class="viz-header">
+            <h3 id="vizTitle">3D Deflection Visualization</h3>
+            <button class="close-viz" id="closeViz">×</button>
+        </div>
+        <canvas id="vizCanvas"></canvas>
+    </div>
     <div class="header">
         <h1>🛡️ Mitigation Strategy Evaluation</h1>
         <p class="subtitle">Evaluate planetary defense methods to deflect incoming asteroids</p>
@@ -343,6 +437,9 @@
             </div>
 
             <button id="calculate-ki">🎯 Calculate KI Deflection</button>
+            <button class="viz-button" id="visualize-ki" style="display: none;">
+                👁️ Visualize in 3D
+            </button>
 
             <div class="results" id="ki-results" style="display: none;">
                 <h3 style="color: var(--success-color); margin-bottom: 15px;">Results</h3>
@@ -419,6 +516,9 @@
             </div>
 
             <button id="calculate-gt">⏱️ Calculate GT Duration</button>
+            <button class="viz-button" id="visualize-gt" style="display: none;">
+                👁️ Visualize in 3D
+            </button>
 
             <div class="results" id="gt-results" style="display: none;">
                 <h3 style="color: var(--success-color); margin-bottom: 15px;">Results</h3>
@@ -592,10 +692,12 @@
             }
 
             document.getElementById('ki-results').style.display = 'block';
+            document.getElementById('visualize-ki').style.display = 'inline-block';
             
             // Store for comparison
             window.kiDeflection = deflectionKm;
             window.kiDuration = 'Instantaneous impact';
+            window.kiData = { impactorMass, impactorVelocity, beta, deltaV, deflectionKm };
             updateComparison();
         });
 
@@ -646,10 +748,12 @@
             }
 
             document.getElementById('gt-results').style.display = 'block';
+            document.getElementById('visualize-gt').style.display = 'inline-block';
             
             // Store for comparison
             window.gtDeflection = requiredDeflection / 1000;
             window.gtDuration = `${durationYears.toFixed(2)} years`;
+            window.gtData = { spacecraftMass, standoffDistance, numTractors, totalForce, durationYears };
             updateComparison();
         });
 
@@ -707,6 +811,242 @@
         dartButton.style.marginTop = '10px';
         dartButton.onclick = loadDARTPreset;
         document.getElementById('calculate-ki').parentElement.insertBefore(dartButton, document.getElementById('calculate-ki'));
+
+        // ===== 3D VISUALIZATION =====
+        let vizScene, vizCamera, vizRenderer, vizAnimationId;
+        const vizPanel = document.getElementById('visualizationPanel');
+        const vizCanvas = document.getElementById('vizCanvas');
+
+        function init3DViz() {
+            vizScene = new THREE.Scene();
+            vizScene.background = new THREE.Color(0x000510);
+
+            vizCamera = new THREE.PerspectiveCamera(60, 700 / 440, 0.1, 10000);
+            vizCamera.position.set(0, 300, 800);
+            vizCamera.lookAt(0, 0, 0);
+
+            vizRenderer = new THREE.WebGLRenderer({ canvas: vizCanvas, antialias: true });
+            vizRenderer.setSize(700, 440);
+
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 1);
+            vizScene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+            sunLight.position.set(200, 200, 200);
+            vizScene.add(sunLight);
+
+            // Add stars
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
+            const starsVertices = [];
+            for (let i = 0; i < 3000; i++) {
+                starsVertices.push(
+                    (Math.random() - 0.5) * 3000,
+                    (Math.random() - 0.5) * 3000,
+                    (Math.random() - 0.5) * 3000
+                );
+            }
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            vizScene.add(stars);
+        }
+
+        function visualizeKI() {
+            if (!vizScene) init3DViz();
+            
+            // Clear scene
+            while(vizScene.children.length > 4) vizScene.children.pop();
+
+            document.getElementById('vizTitle').textContent = '🚀 Kinetic Impactor Deflection';
+            vizPanel.classList.add('active');
+
+            // Create Earth
+            const earthGeom = new THREE.SphereGeometry(50, 32, 32);
+            const earthMat = new THREE.MeshPhongMaterial({ color: 0x2266ff, emissive: 0x001133 });
+            const earth = new THREE.Mesh(earthGeom, earthMat);
+            vizScene.add(earth);
+
+            // Create asteroid (original trajectory - red)
+            const astGeom = new THREE.SphereGeometry(asteroidDiameter / 30, 16, 16);
+            const originalAst = new THREE.Mesh(astGeom, new THREE.MeshPhongMaterial({ color: 0xff0000 }));
+            vizScene.add(originalAst);
+
+            // Create deflected asteroid (green)
+            const deflectedAst = new THREE.Mesh(astGeom, new THREE.MeshPhongMaterial({ color: 0x00ff00 }));
+            vizScene.add(deflectedAst);
+
+            // Create impactor
+            const impactorGeom = new THREE.ConeGeometry(5, 15, 8);
+            const impactor = new THREE.Mesh(impactorGeom, new THREE.MeshPhongMaterial({ 
+                color: 0xffaa00,
+                emissive: 0xff6600,
+                emissiveIntensity: 0.5
+            }));
+            vizScene.add(impactor);
+
+            // Trajectories
+            const originalPath = [];
+            const deflectedPath = [];
+            const deflectionAngle = window.kiData.deflectionKm / 10000; // Exaggerated for visibility
+
+            for (let i = 0; i <= 100; i++) {
+                const t = i / 100;
+                const z = 400 - t * 450;
+                originalPath.push(new THREE.Vector3(0, 0, z));
+                deflectedPath.push(new THREE.Vector3(t * deflectionAngle * 100, 0, z));
+            }
+
+            const originalLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints(originalPath),
+                new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 })
+            );
+            vizScene.add(originalLine);
+
+            const deflectedLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints(deflectedPath),
+                new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 })
+            );
+            vizScene.add(deflectedLine);
+
+            // Animate
+            let frame = 0;
+            function animateKI() {
+                vizAnimationId = requestAnimationFrame(animateKI);
+                frame++;
+
+                const progress = (frame % 200) / 200;
+                const index = Math.floor(progress * originalPath.length);
+
+                if (index < originalPath.length) {
+                    originalAst.position.copy(originalPath[index]);
+                    deflectedAst.position.copy(deflectedPath[index]);
+                    
+                    // Show impactor collision at 30% progress
+                    if (progress > 0.25 && progress < 0.35) {
+                        impactor.position.set(deflectedPath[index].x - 20, 0, deflectedPath[index].z);
+                        impactor.visible = true;
+                        impactor.rotation.z = -Math.PI / 4;
+                    } else {
+                        impactor.visible = false;
+                    }
+                }
+
+                earth.rotation.y += 0.002;
+                vizCamera.position.x = Math.sin(frame * 0.003) * 100;
+                vizRenderer.render(vizScene, vizCamera);
+            }
+            animateKI();
+        }
+
+        function visualizeGT() {
+            if (!vizScene) init3DViz();
+            
+            while(vizScene.children.length > 4) vizScene.children.pop();
+
+            document.getElementById('vizTitle').textContent = '🛰️ Gravity Tractor Deflection';
+            vizPanel.classList.add('active');
+
+            // Create Earth
+            const earthGeom = new THREE.SphereGeometry(50, 32, 32);
+            const earthMat = new THREE.MeshPhongMaterial({ color: 0x2266ff, emissive: 0x001133 });
+            const earth = new THREE.Mesh(earthGeom, earthMat);
+            vizScene.add(earth);
+
+            // Create asteroid
+            const astGeom = new THREE.SphereGeometry(asteroidDiameter / 30, 16, 16);
+            const asteroid = new THREE.Mesh(astGeom, new THREE.MeshPhongMaterial({ color: 0xff6600 }));
+            vizScene.add(asteroid);
+
+            // Create gravity tractors
+            const tractors = [];
+            const numTractors = window.gtData.numTractors;
+            for (let i = 0; i < numTractors; i++) {
+                const tractorGeom = new THREE.BoxGeometry(8, 8, 12);
+                const tractor = new THREE.Mesh(tractorGeom, new THREE.MeshPhongMaterial({ 
+                    color: 0x00ff88,
+                    emissive: 0x00ff88,
+                    emissiveIntensity: 0.3
+                }));
+                vizScene.add(tractor);
+                tractors.push(tractor);
+            }
+
+            // Create gravitational field lines
+            const fieldLines = [];
+            for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                const points = [];
+                for (let r = asteroidDiameter / 30; r < 100; r += 5) {
+                    points.push(new THREE.Vector3(
+                        Math.cos(angle) * r,
+                        Math.sin(angle) * r * 0.5,
+                        0
+                    ));
+                }
+                const line = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints(points),
+                    new THREE.LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.2 })
+                );
+                vizScene.add(line);
+                fieldLines.push(line);
+            }
+
+            // Animate
+            let frame = 0;
+            let deflection = 0;
+            function animateGT() {
+                vizAnimationId = requestAnimationFrame(animateGT);
+                frame++;
+
+                // Slowly deflect asteroid
+                deflection += 0.5;
+                asteroid.position.x = deflection;
+                asteroid.position.z = 300 - frame * 0.5;
+
+                // Position tractors around asteroid
+                tractors.forEach((tractor, i) => {
+                    const angle = (i / numTractors) * Math.PI * 2 + frame * 0.01;
+                    const dist = window.gtData.standoffDistance / 5;
+                    tractor.position.set(
+                        asteroid.position.x + Math.cos(angle) * dist,
+                        Math.sin(angle) * dist,
+                        asteroid.position.z
+                    );
+                    tractor.lookAt(asteroid.position);
+                });
+
+                // Update field lines
+                fieldLines.forEach((line, i) => {
+                    line.position.copy(asteroid.position);
+                    line.rotation.z = frame * 0.005;
+                });
+
+                earth.rotation.y += 0.002;
+                vizCamera.position.x = Math.sin(frame * 0.002) * 150 + deflection;
+                vizCamera.lookAt(asteroid.position);
+                vizRenderer.render(vizScene, vizCamera);
+
+                if (frame > 600) {
+                    frame = 0;
+                    deflection = 0;
+                }
+            }
+            animateGT();
+        }
+
+        function closeViz() {
+            vizPanel.classList.remove('active');
+            if (vizAnimationId) {
+                cancelAnimationFrame(vizAnimationId);
+                vizAnimationId = null;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('closeViz').addEventListener('click', closeViz);
+        document.getElementById('visualize-ki').addEventListener('click', visualizeKI);
+        document.getElementById('visualize-gt').addEventListener('click', visualizeGT);
     </script>
 </body>
 </html>
