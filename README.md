@@ -1,16 +1,37 @@
-# Palantir - 3D Asteroid Impact Simulator 🌍💥
+# Palantir - Asteroid Impact Simulator 🌍💥
 
-An enhanced, interactive **3D web-based** asteroid impact simulator that visualizes the devastating effects of asteroid collisions with Earth. This tool features a fully 3D globe with real buildings, real-time physics calculations, and spectacular destruction visualizations to help understand the scale and consequences of asteroid impacts.
+An enhanced, interactive web-based asteroid impact simulator that visualizes the devastating effects of asteroid collisions with Earth. Features include 2D map for impact selection, 3D trajectory visualization, location-based casualty calculations, and real-time physics simulations.
 
 ## Features
 
-### 🌐 Full 3D Globe Experience
-- **Interactive 3D Earth**: Rotate, zoom, and explore the planet in real-time
-- **Real 3D Buildings**: Uses OpenStreetMap Buildings data to show actual city structures
-- **Building Destruction**: Watch buildings get destroyed by your asteroid impact
-- **Multiple Camera Modes**: Switch between orbital and ground-level views
-- Click anywhere on Earth to drop your asteroid
-- Smooth 3D animations and cinematic camera movements
+### 🗺️ Interactive 2D Map
+- **Click anywhere on Earth** to drop your asteroid
+- **Real-time visualization** of impact zones with colored circles
+- **OpenStreetMap** integration for accurate geography
+- **Zoom and pan** controls for detailed exploration
+- **Animated impact markers** showing ground zero
+- **Reliable rendering** that works on all systems
+
+### 🚀 3D Trajectory Visualization (NEW!)
+- **Separate trajectory page** with full 3D animation
+- Watch the meteor approach Earth from space
+- **Atmospheric entry effects** with heat trails
+- **Impact explosion** with particle effects
+- **Real-time timeline** showing impact phases
+- **Orbiting camera** for cinematic views
+- **Seamless navigation** between pages
+
+### 📊 Dynamic Casualty Calculations (NEW!)
+- **Location-based factors**:
+  - Urban areas (8,000 people/km²)
+  - Suburban areas (3,000 people/km²)
+  - Rural areas (100 people/km²)
+  - Coastal regions (tsunami risk)
+  - Mountainous terrain
+- **Building density** calculations
+- **Major city detection** (NYC, LA, Tokyo, etc.)
+- **Realistic fatality rates** by zone type
+- **Tsunami multiplier** for coastal impacts
 
 ### ⚙️ Advanced Physics Simulation
 - **Impact Energy**: Calculates kinetic energy in megatons of TNT
